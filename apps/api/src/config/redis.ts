@@ -16,23 +16,49 @@ if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
 
 // ─── IORedis (Local development - TCP-based) ────────────────
 let ioRedisClient: IORedis | null = null;
+let redisAvailable = false;
 
-if (env.REDIS_URL && !upstashClient) {
-  ioRedisClient = new IORedis(env.REDIS_URL, {
-    maxRetriesPerRequest: 3,
-    retryStrategy(times) {
-      const delay = Math.min(times * 50, 2000);
-      return delay;
-    },
-  });
+// Only try to connect if REDIS_URL is explicitly set AND not empty
+if (env.REDIS_URL && env.REDIS_URL !== "" && !upstashClient) {
+  try {
+    ioRedisClient = new IORedis(env.REDIS_URL, {
+      maxRetriesPerRequest: 1,
+      retryStrategy(times) {
+        if (times > 1) {
+          // Stop retrying — Redis is not available
+          logger.warn("Redis not available. Running without Redis (sessions stored in memory).");
+          redisAvailable = false;
+          return null; // Stop retrying
+        }
+        return 500;
+      },
+      lazyConnect: true,
+      connectTimeout: 3000,
+    });
 
-  ioRedisClient.on("connect", () => {
-    logger.info("IORedis connected");
-  });
+    ioRedisClient.on("connect", () => {
+      logger.info("IORedis connected");
+      redisAvailable = true;
+    });
 
-  ioRedisClient.on("error", (err) => {
-    logger.error("IORedis error:", err.message);
-  });
+    ioRedisClient.on("error", (err) => {
+      // Silently handle — don't crash the app
+      redisAvailable = false;
+    });
+
+    // Try to connect (non-blocking)
+    ioRedisClient.connect().catch(() => {
+      redisAvailable = false;
+      ioRedisClient = null;
+      logger.warn("Redis unavailable — app will work without caching/sessions in Redis.");
+    });
+  } catch {
+    ioRedisClient = null;
+    redisAvailable = false;
+    logger.warn("Redis initialization failed — running without Redis.");
+  }
+} else if (!upstashClient) {
+  logger.info("No Redis configured — running without Redis (OK for development).");
 }
 
 // ─── Unified Redis Service ──────────────────────────────────

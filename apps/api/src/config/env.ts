@@ -12,7 +12,7 @@ export const env = {
     process.env.MONGODB_URI || "mongodb://localhost:27017/voicemind",
 
   // Redis (Upstash)
-  REDIS_URL: process.env.REDIS_URL || "redis://localhost:6379",
+  REDIS_URL: process.env.REDIS_URL || "",
   UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL || "",
   UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN || "",
 

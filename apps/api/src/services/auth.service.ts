@@ -141,13 +141,17 @@ export class AuthService {
       { expiresIn: env.JWT_REFRESH_EXPIRES_IN }
     );
 
-    // Store session in Redis with TTL
+    // Store session in Redis with TTL (non-blocking — OK if Redis is down)
     const sessionKey = `session:${userId}`;
-    await redis.set(
-      sessionKey,
-      JSON.stringify({ tokenId, createdAt: Date.now() }),
-      env.SESSION_TTL
-    );
+    try {
+      await redis.set(
+        sessionKey,
+        JSON.stringify({ tokenId, createdAt: Date.now() }),
+        env.SESSION_TTL
+      );
+    } catch {
+      // Redis unavailable — sessions won't be revocable but auth still works
+    }
 
     return { accessToken, refreshToken };
   }

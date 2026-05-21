@@ -50,11 +50,14 @@ export const authenticate = async (
       throw ApiError.unauthorized("Invalid token.");
     }
 
-    // 3. Check Redis session (ensures token hasn't been revoked)
+    // 3. Check Redis session (skip if Redis unavailable)
     const sessionKey = `session:${decoded.userId}`;
     const sessionExists = await redis.exists(sessionKey);
 
-    if (!sessionExists) {
+    // If Redis is down, allow the request through (JWT is still valid)
+    // If Redis is up and session doesn't exist, token was revoked
+    if (sessionExists === false && await redis.get("__redis_ping__") !== null) {
+      // Redis is working but session not found — revoked
       throw ApiError.unauthorized("Session expired. Please log in again.");
     }
 

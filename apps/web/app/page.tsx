@@ -108,7 +108,7 @@ export default function Home() {
             </p>
           </div>
 
-          <ParallaxContainer className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <FloatingCard glowColor="cyan" floatDelay={0} className="flex flex-col gap-4 h-[280px] justify-between">
               <div className="flex flex-col gap-3">
                 <div className="w-10 h-10 rounded-xl bg-cyan-950/40 border border-cyan-500/25 flex items-center justify-center text-cyan-400 font-bold text-lg">
@@ -159,7 +159,7 @@ export default function Home() {
                 Interactive Orbs &rarr;
               </span>
             </FloatingCard>
-          </ParallaxContainer>
+          </div>
         </section>
 
         {/* ACOUSTIC DIMENSION SECTION */}

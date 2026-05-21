@@ -12,8 +12,10 @@
     "dev:api": "turbo run dev --filter=@voicemind/api",
     "dev:voice": "cd services/voice-analysis && python -m uvicorn main:app --reload --port 8001",
     "db:seed": "turbo run db:seed --filter=@voicemind/api",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:dev": "docker compose -f docker-compose.dev.yml up -d",
+    "docker:all": "docker compose up --build",
     "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {

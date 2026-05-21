@@ -627,7 +627,7 @@ export function VoiceCheckIn() {
               </motion.div>
             )}
 
-            {/* COMPLETE STATE */}
+            {/* COMPLETE STATE — User-Friendly Results */}
             {phase === "complete" && analysisResult && (
               <motion.div
                 key="complete"
@@ -636,96 +636,117 @@ export function VoiceCheckIn() {
                 exit={{ opacity: 0, y: -10 }}
                 className="space-y-5"
               >
-                {/* Success indicator */}
-                <div className="flex justify-center">
+                {/* Mood Emoji + Feeling */}
+                <div className="text-center">
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", bounce: 0.5 }}
-                    className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center"
+                    className="text-4xl mb-2"
                   >
-                    <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                    {analysisResult.stress_score > 60 ? "😰" :
+                     analysisResult.anxiety_score > 60 ? "😟" :
+                     analysisResult.depression_score > 60 ? "😔" :
+                     analysisResult.stress_score < 30 && analysisResult.anxiety_score < 30 ? "😌" :
+                     "🙂"}
                   </motion.div>
-                </div>
-
-                {/* Emotion Label */}
-                <div className="text-center">
                   <p className="text-lg font-semibold text-white/90 capitalize">
-                    {analysisResult.emotion}
+                    You seem {analysisResult.emotion}
                   </p>
-                  <p className="text-xs text-white/30 mt-0.5">
-                    Confidence: {Math.round(analysisResult.confidence * 100)}%
+                  <p className="text-xs text-white/30 mt-1">
+                    Based on your voice patterns just now
                   </p>
                 </div>
 
-                {/* Score Cards */}
-                <div className="grid grid-cols-3 gap-2">
+                {/* Wellness Meters — Visual, not numbers */}
+                <div className="space-y-3 p-4 rounded-xl bg-white/[0.02] border border-white/5">
                   {[
                     {
-                      label: "Stress",
+                      label: "Stress Level",
                       value: analysisResult.stress_score,
-                      color: "red",
+                      desc: analysisResult.stress_score < 30 ? "You sound relaxed" :
+                            analysisResult.stress_score < 60 ? "Some tension detected" :
+                            "Your voice shows significant stress",
+                      gradient: "from-emerald-500 to-emerald-400",
+                      gradientMid: "from-amber-500 to-amber-400",
+                      gradientHigh: "from-red-500 to-red-400",
                     },
                     {
-                      label: "Anxiety",
+                      label: "Anxiety Indicators",
                       value: analysisResult.anxiety_score,
-                      color: "amber",
+                      desc: analysisResult.anxiety_score < 30 ? "Calm and grounded" :
+                            analysisResult.anxiety_score < 60 ? "Mild restlessness" :
+                            "Elevated nervousness detected",
+                      gradient: "from-emerald-500 to-emerald-400",
+                      gradientMid: "from-amber-500 to-amber-400",
+                      gradientHigh: "from-orange-500 to-orange-400",
                     },
                     {
-                      label: "Depression",
-                      value: analysisResult.depression_score,
-                      color: "blue",
+                      label: "Emotional Energy",
+                      value: 100 - analysisResult.depression_score,
+                      desc: analysisResult.depression_score < 30 ? "Good energy levels" :
+                            analysisResult.depression_score < 60 ? "Slightly low energy" :
+                            "Your voice sounds tired today",
+                      gradient: "from-emerald-500 to-emerald-400",
+                      gradientMid: "from-amber-500 to-amber-400",
+                      gradientHigh: "from-blue-500 to-blue-400",
                     },
-                  ].map((item, i) => (
+                  ].map((meter, i) => (
                     <motion.div
-                      key={item.label}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 + i * 0.1 }}
-                      className="p-3 rounded-xl bg-white/[0.03] border border-white/5 text-center"
+                      key={meter.label}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.3 + i * 0.15 }}
                     >
-                      <p className="text-[10px] text-white/30 uppercase tracking-wider">
-                        {item.label}
-                      </p>
-                      <p
-                        className={`text-xl font-bold mt-1 ${
-                          item.value < 30
-                            ? "text-emerald-400"
-                            : item.value < 60
-                            ? "text-amber-400"
-                            : "text-red-400"
-                        }`}
-                      >
-                        {item.value}
-                      </p>
-                      <p className="text-[9px] text-white/20">/100</p>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-white/50">{meter.label}</span>
+                        <span className="text-[10px] text-white/30">
+                          {meter.value < 30 ? "Low" : meter.value < 60 ? "Moderate" : "High"}
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full bg-white/[0.05] overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${meter.value}%` }}
+                          transition={{ duration: 1, delay: 0.5 + i * 0.15, ease: "easeOut" }}
+                          className={`h-full rounded-full bg-gradient-to-r ${
+                            meter.value < 30 ? meter.gradient :
+                            meter.value < 60 ? meter.gradientMid :
+                            meter.gradientHigh
+                          }`}
+                        />
+                      </div>
+                      <p className="text-[10px] text-white/25 mt-1">{meter.desc}</p>
                     </motion.div>
                   ))}
                 </div>
 
-                {/* Voice Metrics */}
-                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                  <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">
-                    Voice Biomarkers
+                {/* Wellness Suggestion */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1 }}
+                  className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/10"
+                >
+                  <p className="text-xs text-purple-300/70 font-medium mb-1">
+                    💡 Suggestion for you
                   </p>
-                  <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
-                    {[
-                      { label: "Pitch", value: `${analysisResult.metrics.pitch} Hz` },
-                      { label: "Energy", value: analysisResult.metrics.energy.toFixed(3) },
-                      { label: "Rate", value: `${analysisResult.metrics.speech_rate} syl/s` },
-                      { label: "Jitter", value: analysisResult.metrics.jitter.toFixed(3) },
-                      { label: "Pauses", value: `${Math.round(analysisResult.metrics.pause_ratio * 100)}%` },
-                      { label: "Pitch Var", value: `${analysisResult.metrics.pitch_variability} Hz` },
-                    ].map((m) => (
-                      <div key={m.label} className="flex justify-between">
-                        <span className="text-[10px] text-white/25">{m.label}</span>
-                        <span className="text-[10px] text-white/50 font-mono">
-                          {m.value}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                  <p className="text-sm text-white/60 leading-relaxed">
+                    {analysisResult.stress_score > 60
+                      ? "Try taking 3 slow deep breaths right now. Inhale for 4 seconds, hold for 4, exhale for 6."
+                      : analysisResult.anxiety_score > 60
+                      ? "Ground yourself: notice 5 things you can see, 4 you can touch, 3 you can hear."
+                      : analysisResult.depression_score > 60
+                      ? "A short walk or a glass of water can help lift your energy. Be gentle with yourself today."
+                      : "You're in a good place. Keep doing what you're doing — maybe journal what went well today."
+                    }
+                  </p>
+                </motion.div>
+
+                {/* Disclaimer */}
+                <p className="text-[9px] text-white/15 text-center">
+                  This is not a medical diagnosis. If you need support, please reach out to a professional.
+                </p>
 
                 {/* Reset Button */}
                 <motion.button

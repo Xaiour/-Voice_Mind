@@ -11,10 +11,10 @@ import {
   RotateCcw,
   CheckCircle2,
   Loader2,
-  CloudUpload,
+  UploadCloud,
   FileAudio,
   X,
-  Heart,
+  HeartPulse,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────
@@ -372,7 +372,7 @@ export function VoiceCheckIn() {
               animate={{ scale: 1, opacity: 1 }}
               className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-purple-500/20 bg-purple-500/5 text-purple-300 text-xs font-medium mb-3"
             >
-              <Heart className="w-3 h-3" />
+              <HeartPulse className="w-3 h-3" />
               Voice Check-In
             </motion.div>
             <h2 className="text-lg font-semibold text-white/90">
@@ -439,7 +439,7 @@ export function VoiceCheckIn() {
                     onChange={handleFileInput}
                   />
                   <div className="flex items-center justify-center gap-2 p-4 rounded-xl border border-dashed border-white/10 hover:border-purple-400/30 hover:bg-white/[0.02] transition-all">
-                    <CloudUpload className="w-4 h-4 text-white/30" />
+                    <UploadCloud className="w-4 h-4 text-white/30" />
                     <span className="text-xs text-white/40">
                       Drop audio file or click to browse
                     </span>

@@ -10,9 +10,6 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
 
-// Dynamic import for the small orb (constrained size)
-const EmotionalOrb = dynamic(() => import("@/components/three-d/EmotionalOrb"), { ssr: false });
-
 type EmotionType = "calm" | "energetic" | "anxious" | "joyful";
 
 function mapEmotionToType(emotion: string | undefined): EmotionType {
@@ -24,53 +21,84 @@ function mapEmotionToType(emotion: string | undefined): EmotionType {
   return "calm";
 }
 
+// ─── Empty State (No Sessions) ──────────────────────────────
+function EmptyDashboard() {
+  return (
+    <div className="relative min-h-screen text-slate-100 font-sans select-none overflow-x-hidden" style={{ backgroundColor: "#050510" }}>
+      <ParticleBackground />
+
+      <header className="w-full px-6 py-4 relative z-10">
+        <nav className="max-w-7xl mx-auto flex items-center justify-between px-6 py-3 rounded-full glass-panel">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="text-sm font-semibold text-slate-400 hover:text-slate-200 transition-colors">
+              &larr; Home
+            </Link>
+            <div className="w-[1px] h-4 bg-slate-800" />
+            <span className="text-sm font-bold text-neon-gradient">Dashboard</span>
+          </div>
+          <Link
+            href="/settings"
+            className="w-8 h-8 rounded-full border border-slate-700 bg-slate-900 flex items-center justify-center font-bold text-xs text-slate-300 hover:border-slate-600 transition-colors"
+          >
+            VM
+          </Link>
+        </nav>
+      </header>
+
+      <main className="w-full max-w-2xl mx-auto px-6 py-20 relative z-10 flex flex-col items-center text-center gap-8">
+        <div className="w-24 h-24 rounded-full border-2 border-dashed border-slate-800 flex items-center justify-center">
+          <span className="text-4xl">🎙️</span>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-100">
+            No data yet
+          </h1>
+          <p className="text-sm text-slate-400 max-w-md leading-relaxed">
+            Your dashboard will come alive after your first voice check-in. Record a 30-second sample and we&apos;ll analyze your vocal biomarkers — stress, energy, pitch, and emotional state.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3 w-full max-w-xs">
+          <Link
+            href="/voice"
+            className="px-8 py-4 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-bold text-sm hover:brightness-110 shadow-[0_0_30px_rgba(6,182,212,0.3)] transition-all duration-300 text-center"
+          >
+            Record First Check-In
+          </Link>
+          <p className="text-[10px] text-slate-600">Takes less than 30 seconds</p>
+        </div>
+
+        {/* Preview of what they'll see */}
+        <div className="w-full mt-8 glass-card rounded-2xl p-6 text-left">
+          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">What you&apos;ll see after recording:</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-cyan-950/40 border border-cyan-500/20 flex items-center justify-center text-cyan-400 text-xs">📊</div>
+              <span className="text-xs text-slate-400">Mood & Stress Trends</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-purple-950/40 border border-purple-500/20 flex items-center justify-center text-purple-400 text-xs">🎵</div>
+              <span className="text-xs text-slate-400">Voice Biomarkers</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-pink-950/40 border border-pink-500/20 flex items-center justify-center text-pink-400 text-xs">⚡</div>
+              <span className="text-xs text-slate-400">Energy & Wellness Score</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-950/40 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs">📈</div>
+              <span className="text-xs text-slate-400">Session History</span>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// ─── Main Dashboard (Has Data) ──────────────────────────────
 export default function DashboardPage() {
   const { analyses, latest, isLoading, stats } = useDashboardData();
-  const [activeEmotion, setActiveEmotion] = useState<EmotionType>("calm");
-
-  useEffect(() => {
-    if (latest?.emotions?.primary) {
-      setActiveEmotion(mapEmotionToType(latest.emotions.primary));
-    }
-  }, [latest]);
-
-  // Build chart data from analyses (last 7 sessions or mock data)
-  const moodTrendData = analyses.length > 0
-    ? analyses.slice(0, 7).reverse().map((a, i) => ({
-        session: `S${i + 1}`,
-        mood: Math.round((a.aiInsights?.sentimentScore || 5) * 10),
-        stress: Math.round(100 - (a.aiInsights?.sentimentScore || 5) * 10),
-        energy: Math.round((1 - (a.emotions?.distribution?.sad || 0)) * 100),
-      }))
-    : [
-        { session: "S1", mood: 65, stress: 35, energy: 72 },
-        { session: "S2", mood: 58, stress: 42, energy: 68 },
-        { session: "S3", mood: 72, stress: 28, energy: 78 },
-        { session: "S4", mood: 45, stress: 55, energy: 52 },
-        { session: "S5", mood: 80, stress: 20, energy: 85 },
-        { session: "S6", mood: 68, stress: 32, energy: 74 },
-        { session: "S7", mood: 75, stress: 25, energy: 80 },
-      ];
-
-  // Voice metrics from latest analysis
-  const voiceMetrics = latest?.voiceFeatures
-    ? [
-        { name: "Pitch", value: Math.round(latest.voiceFeatures.pitch?.mean || 142), unit: "Hz", max: 300 },
-        { name: "Energy", value: Math.round((latest.voiceFeatures.energy?.mean || 0.06) * 1000), unit: "mW", max: 100 },
-        { name: "Speech Rate", value: Math.round(latest.voiceFeatures.speakingRate || 3.4), unit: "syl/s", max: 8 },
-        { name: "Pauses", value: Math.round((latest.voiceFeatures.pauseFrequency || 0.28) * 100), unit: "%", max: 100 },
-      ]
-    : [
-        { name: "Pitch", value: 142, unit: "Hz", max: 300 },
-        { name: "Energy", value: 60, unit: "mW", max: 100 },
-        { name: "Speech Rate", value: 3, unit: "syl/s", max: 8 },
-        { name: "Pauses", value: 28, unit: "%", max: 100 },
-      ];
-
-  // Radial data for the wellness score
-  const wellnessRadial = [
-    { name: "score", value: stats.moodScore || 50, fill: "#00f0ff" },
-  ];
 
   if (isLoading) {
     return (
@@ -82,6 +110,38 @@ export default function DashboardPage() {
       </div>
     );
   }
+
+  // Show empty state if no sessions
+  if (stats.totalSessions === 0) {
+    return <EmptyDashboard />;
+  }
+
+  // Build chart data from analyses
+  const moodTrendData = analyses.slice(0, 7).reverse().map((a, i) => ({
+    session: `S${i + 1}`,
+    mood: Math.round((a.aiInsights?.sentimentScore || 5) * 10),
+    stress: Math.round(100 - (a.aiInsights?.sentimentScore || 5) * 10),
+    energy: Math.round((1 - (a.emotions?.distribution?.sad || 0)) * 100),
+  }));
+
+  // Voice metrics from latest analysis
+  const voiceMetrics = latest?.voiceFeatures
+    ? [
+        { name: "Pitch", value: Math.round(latest.voiceFeatures.pitch?.mean || 0), unit: "Hz" },
+        { name: "Energy", value: Math.round((latest.voiceFeatures.energy?.mean || 0) * 1000), unit: "mW" },
+        { name: "Speed", value: Math.round(latest.voiceFeatures.speakingRate || 0), unit: "syl/s" },
+        { name: "Pauses", value: Math.round((latest.voiceFeatures.pauseFrequency || 0) * 100), unit: "%" },
+      ]
+    : [
+        { name: "Pitch", value: 142, unit: "Hz" },
+        { name: "Energy", value: 60, unit: "mW" },
+        { name: "Speed", value: 3, unit: "syl/s" },
+        { name: "Pauses", value: 28, unit: "%" },
+      ];
+
+  const wellnessRadial = [
+    { name: "score", value: stats.moodScore, fill: "#00f0ff" },
+  ];
 
   return (
     <div className="relative min-h-screen text-slate-100 font-sans select-none overflow-x-hidden" style={{ backgroundColor: "#050510" }}>
@@ -129,118 +189,87 @@ export default function DashboardPage() {
                 </RadialBarChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-lg font-extrabold text-cyan-400">{stats.moodScore || "--"}</span>
+                <span className="text-lg font-extrabold text-cyan-400">{stats.moodScore}</span>
               </div>
             </div>
             <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Wellness</span>
           </div>
 
           {/* Stress */}
-          <div className="glass-card rounded-2xl p-5 flex flex-col justify-between">
+          <div className="glass-card rounded-2xl p-5 flex flex-col justify-between gap-2">
             <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Stress</span>
-            <span className="text-3xl font-extrabold text-slate-100">{stats.stressLevel || "--"}<span className="text-sm text-slate-500">%</span></span>
+            <span className="text-3xl font-extrabold text-slate-100">{stats.stressLevel}<span className="text-sm text-slate-500">%</span></span>
             <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
-              <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-rose-500 transition-all duration-700" style={{ width: `${stats.stressLevel || 0}%` }} />
+              <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-rose-500 transition-all duration-700" style={{ width: `${stats.stressLevel}%` }} />
             </div>
             <span className="text-[9px] text-slate-500">{stats.stressLevel < 30 ? "Low" : stats.stressLevel < 60 ? "Moderate" : "High"}</span>
           </div>
 
           {/* Sessions */}
-          <div className="glass-card rounded-2xl p-5 flex flex-col justify-between">
+          <div className="glass-card rounded-2xl p-5 flex flex-col justify-between gap-2">
             <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Sessions</span>
             <span className="text-3xl font-extrabold text-slate-100">{stats.totalSessions}</span>
-            <span className="text-[9px] text-slate-500">Total recordings analyzed</span>
+            <span className="text-[9px] text-slate-500">Total recordings</span>
           </div>
 
           {/* Energy */}
-          <div className="glass-card rounded-2xl p-5 flex flex-col justify-between">
+          <div className="glass-card rounded-2xl p-5 flex flex-col justify-between gap-2">
             <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Energy</span>
-            <span className="text-3xl font-extrabold text-slate-100">{stats.energyLevel || "--"}<span className="text-sm text-slate-500">%</span></span>
+            <span className="text-3xl font-extrabold text-slate-100">{stats.energyLevel}<span className="text-sm text-slate-500">%</span></span>
             <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
-              <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-cyan-400 transition-all duration-700" style={{ width: `${stats.energyLevel || 0}%` }} />
+              <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-cyan-400 transition-all duration-700" style={{ width: `${stats.energyLevel}%` }} />
             </div>
             <span className="text-[9px] text-slate-500">{stats.energyLevel > 70 ? "High" : stats.energyLevel > 40 ? "Normal" : "Low"}</span>
           </div>
         </div>
 
-        {/* ROW 2: Mood Trend Chart + Emotional Orb */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Mood Trend - Takes 2 cols */}
-          <div className="lg:col-span-2 glass-card rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-sm font-bold text-slate-200">Mood & Stress Trend</h3>
-                <p className="text-[10px] text-slate-500">Last {moodTrendData.length} sessions</p>
-              </div>
-              <div className="flex items-center gap-4 text-[10px]">
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-cyan-400" />Mood</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400" />Stress</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-400" />Energy</span>
-              </div>
+        {/* ROW 2: Mood Trend Chart (full width) */}
+        <div className="glass-card rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-bold text-slate-200">Mood & Stress Trend</h3>
+              <p className="text-[10px] text-slate-500">Last {moodTrendData.length} sessions</p>
             </div>
-            <div className="h-[200px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={moodTrendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="moodGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#00f0ff" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#00f0ff" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="stressGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-                  <XAxis dataKey="session" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} domain={[0, 100]} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#0a0a1a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "11px" }}
-                    labelStyle={{ color: "#94a3b8" }}
-                  />
-                  <Area type="monotone" dataKey="mood" stroke="#00f0ff" fill="url(#moodGrad)" strokeWidth={2} dot={false} />
-                  <Area type="monotone" dataKey="stress" stroke="#f43f5e" fill="url(#stressGrad)" strokeWidth={2} dot={false} />
-                  <Area type="monotone" dataKey="energy" stroke="#a855f7" fill="none" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div className="flex items-center gap-4 text-[10px]">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-cyan-400" />Mood</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400" />Stress</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-400" />Energy</span>
             </div>
           </div>
-
-          {/* Emotional State Orb - Constrained */}
-          <div className="glass-card rounded-2xl p-5 flex flex-col justify-between overflow-hidden">
-            <div>
-              <h3 className="text-sm font-bold text-slate-200">Current State</h3>
-              <p className="text-[10px] text-slate-500 mt-1">
-                {latest?.emotions?.primary ? `Detected: ${latest.emotions.primary}` : "No analysis yet"}
-              </p>
-            </div>
-            <div className="h-[140px] w-full relative">
-              <EmotionalOrb emotion={activeEmotion} interactive={false} />
-            </div>
-            <div className="grid grid-cols-4 gap-1">
-              {(["calm", "energetic", "anxious", "joyful"] as EmotionType[]).map((emo) => (
-                <button
-                  key={emo}
-                  onClick={() => setActiveEmotion(emo)}
-                  className={`py-1.5 rounded-lg text-[8px] font-bold uppercase tracking-wider transition-all border ${
-                    activeEmotion === emo
-                      ? "bg-slate-100 border-slate-100 text-slate-950"
-                      : "bg-transparent border-slate-800 text-slate-500 hover:border-slate-700"
-                  }`}
-                >
-                  {emo}
-                </button>
-              ))}
-            </div>
+          <div className="h-[220px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={moodTrendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="moodGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#00f0ff" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#00f0ff" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="stressGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                <XAxis dataKey="session" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} domain={[0, 100]} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#0a0a1a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "11px" }}
+                  labelStyle={{ color: "#94a3b8" }}
+                />
+                <Area type="monotone" dataKey="mood" stroke="#00f0ff" fill="url(#moodGrad)" strokeWidth={2} dot={{ r: 3, fill: "#00f0ff" }} />
+                <Area type="monotone" dataKey="stress" stroke="#f43f5e" fill="url(#stressGrad)" strokeWidth={2} dot={{ r: 3, fill: "#f43f5e" }} />
+                <Area type="monotone" dataKey="energy" stroke="#a855f7" fill="none" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* ROW 3: Voice Metrics Bar Chart + Recent Logs */}
+        {/* ROW 3: Voice Metrics + Recent Sessions */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Voice Metrics */}
           <div className="glass-card rounded-2xl p-6">
             <h3 className="text-sm font-bold text-slate-200 mb-1">Voice Biomarkers</h3>
-            <p className="text-[10px] text-slate-500 mb-4">Acoustic features from {latest ? "latest" : "sample"} analysis</p>
+            <p className="text-[10px] text-slate-500 mb-4">Acoustic features from latest analysis</p>
             <div className="h-[180px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={voiceMetrics} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
@@ -249,7 +278,7 @@ export default function DashboardPage() {
                   <YAxis tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
                   <Tooltip
                     contentStyle={{ backgroundColor: "#0a0a1a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "11px" }}
-                    formatter={(value: number, name: string, props: any) => [`${value} ${props.payload.unit}`, name]}
+                    formatter={(value: number, _name: string, props: { payload: { unit: string } }) => [`${value} ${props.payload.unit}`, "Value"]}
                   />
                   <Bar dataKey="value" radius={[6, 6, 0, 0]} fill="url(#barGrad)" />
                   <defs>
@@ -267,52 +296,38 @@ export default function DashboardPage() {
           <div className="glass-card rounded-2xl p-6 flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-bold text-slate-200">Recent Sessions</h3>
-              {analyses.length > 0 && (
-                <Link href="/voice/history" className="text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors">
-                  View all &rarr;
-                </Link>
-              )}
+              <Link href="/voice/history" className="text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors">
+                View all &rarr;
+              </Link>
             </div>
 
             <div className="flex-1 flex flex-col gap-3 overflow-y-auto">
-              {analyses.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center py-8">
-                  <div className="w-12 h-12 rounded-full border border-slate-800 flex items-center justify-center text-2xl">
-                    🎙️
-                  </div>
-                  <p className="text-sm text-slate-400">No sessions yet</p>
-                  <Link href="/voice" className="text-xs text-purple-400 hover:text-purple-300 px-4 py-2 rounded-full border border-purple-500/30 transition-colors">
-                    Record your first check-in
-                  </Link>
-                </div>
-              ) : (
-                analyses.slice(0, 5).map((a) => {
-                  const emotion = mapEmotionToType(a.emotions?.primary);
-                  const score = Math.round((a.aiInsights?.sentimentScore || 5) * 10);
-                  const colors: Record<EmotionType, string> = {
-                    calm: "text-cyan-400",
-                    energetic: "text-pink-400",
-                    anxious: "text-purple-400",
-                    joyful: "text-yellow-400",
-                  };
-                  return (
-                    <div key={a._id} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/30 border border-slate-900 hover:border-slate-800 transition-colors">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-xs font-semibold text-slate-200 truncate max-w-[180px]">
-                          {a.audioFileName || "Voice Recording"}
-                        </span>
-                        <span className="text-[10px] text-slate-500">
-                          {new Date(a.createdAt).toLocaleDateString()} &middot; {a.emotions?.primary || "analyzing"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`text-xs font-bold ${colors[emotion]}`}>{score}/100</span>
-                        <span className={`w-2 h-2 rounded-full ${score > 60 ? "bg-emerald-400" : score > 40 ? "bg-amber-400" : "bg-rose-400"}`} />
-                      </div>
+              {analyses.slice(0, 5).map((a) => {
+                const emotion = mapEmotionToType(a.emotions?.primary);
+                const score = Math.round((a.aiInsights?.sentimentScore || 5) * 10);
+                const colors: Record<EmotionType, string> = {
+                  calm: "text-cyan-400",
+                  energetic: "text-pink-400",
+                  anxious: "text-purple-400",
+                  joyful: "text-yellow-400",
+                };
+                return (
+                  <div key={a._id} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/30 border border-slate-900 hover:border-slate-800 transition-colors">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs font-semibold text-slate-200 truncate max-w-[180px]">
+                        {a.audioFileName || "Voice Recording"}
+                      </span>
+                      <span className="text-[10px] text-slate-500">
+                        {new Date(a.createdAt).toLocaleDateString()} &middot; {a.emotions?.primary || "analyzing"}
+                      </span>
                     </div>
-                  );
-                })
-              )}
+                    <div className="flex items-center gap-3">
+                      <span className={`text-xs font-bold ${colors[emotion]}`}>{score}/100</span>
+                      <span className={`w-2 h-2 rounded-full ${score > 60 ? "bg-emerald-400" : score > 40 ? "bg-amber-400" : "bg-rose-400"}`} />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

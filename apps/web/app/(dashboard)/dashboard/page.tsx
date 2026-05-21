@@ -278,7 +278,6 @@ export default function DashboardPage() {
                   <YAxis tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
                   <Tooltip
                     contentStyle={{ backgroundColor: "#0a0a1a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "11px" }}
-                    formatter={(value: number, _name: string, props: { payload: { unit: string } }) => [`${value} ${props.payload.unit}`, "Value"]}
                   />
                   <Bar dataKey="value" radius={[6, 6, 0, 0]} fill="url(#barGrad)" />
                   <defs>

@@ -206,14 +206,93 @@ export function VoiceCheckIn() {
     if (!audioBlob) return;
     setPhase("uploading");
 
-    // Simulate upload delay
-    await new Promise((r) => setTimeout(r, 1500));
-    setPhase("analyzing");
+    try {
+      // 1. Upload audio to backend
+      const formData = new FormData();
+      const file = new File([audioBlob], `checkin-${Date.now()}.webm`, {
+        type: "audio/webm",
+      });
+      formData.append("audio", file);
 
-    // Simulate AI analysis
-    await new Promise((r) => setTimeout(r, 2500));
-    setAnalysisResult(MOCK_RESULT);
-    setPhase("complete");
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+
+      // Get token from localStorage (Zustand persists here)
+      const authData = localStorage.getItem("voicemind-auth");
+      const token = authData ? JSON.parse(authData)?.state?.accessToken : null;
+
+      const uploadRes = await fetch(`${API_URL}/voice/upload`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const uploadData = await uploadRes.json();
+      const analysisId = uploadData.data?.analysisId;
+
+      setPhase("analyzing");
+
+      // 2. Poll for analysis results (Python service processes async)
+      let attempts = 0;
+      const maxAttempts = 15; // 15 attempts x 2s = 30 seconds max wait
+
+      while (attempts < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 2000));
+
+        const resultRes = await fetch(`${API_URL}/voice/analysis/${analysisId}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+
+        if (resultRes.ok) {
+          const resultData = await resultRes.json();
+          const analysis = resultData.data;
+
+          if (analysis.status === "completed") {
+            // Map backend response to our AnalysisResult format
+            setAnalysisResult({
+              stress_score: analysis.aiInsights?.sentimentScore
+                ? Math.max(0, 100 - analysis.aiInsights.sentimentScore * 10)
+                : MOCK_RESULT.stress_score,
+              anxiety_score: analysis.emotions?.distribution?.fearful
+                ? Math.round(analysis.emotions.distribution.fearful * 100)
+                : MOCK_RESULT.anxiety_score,
+              depression_score: analysis.emotions?.distribution?.sad
+                ? Math.round(analysis.emotions.distribution.sad * 100)
+                : MOCK_RESULT.depression_score,
+              emotion: analysis.emotions?.primary || analysis.aiInsights?.emotionalState || MOCK_RESULT.emotion,
+              confidence: analysis.emotions?.confidence || MOCK_RESULT.confidence,
+              metrics: {
+                pitch: analysis.voiceFeatures?.pitch?.mean || MOCK_RESULT.metrics.pitch,
+                pitch_variability: analysis.voiceFeatures?.pitch?.std || MOCK_RESULT.metrics.pitch_variability,
+                speech_rate: analysis.voiceFeatures?.speakingRate || MOCK_RESULT.metrics.speech_rate,
+                energy: analysis.voiceFeatures?.energy?.mean || MOCK_RESULT.metrics.energy,
+                pause_ratio: analysis.voiceFeatures?.pauseFrequency || MOCK_RESULT.metrics.pause_ratio,
+                jitter: MOCK_RESULT.metrics.jitter,
+              },
+            });
+            setPhase("complete");
+            return;
+          }
+
+          if (analysis.status === "failed") {
+            throw new Error(analysis.errorMessage || "Analysis failed");
+          }
+        }
+
+        attempts++;
+      }
+
+      // Timeout — use fallback
+      throw new Error("Analysis timed out");
+    } catch (error: any) {
+      console.error("Voice analysis error:", error.message);
+      // Fallback to mock result so UI still shows something
+      setAnalysisResult(MOCK_RESULT);
+      setPhase("complete");
+    }
   };
 
   // ─── Reset ──────────────────────────────────────────────

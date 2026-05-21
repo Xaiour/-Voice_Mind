@@ -1,7 +1,4 @@
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
-import { env } from "../config/env";
-import { redis } from "../config/redis";
 import { ApiError } from "../utils/ApiError";
 import { User } from "../models/User";
 
@@ -16,14 +13,16 @@ declare global {
 }
 
 /**
- * Authentication middleware.
- * Verifies JWT token from Authorization header and checks Redis session.
+ * Authentication middleware — Dummy mode (no JWT).
  *
- * Flow:
- * 1. Extract Bearer token from header
+ * Reads user ID from `x-user-id` header and looks up user in DB.
+ * This is a simple passthrough for development.
+ *
+ * TODO: Re-enable JWT verification when ready:
+ * 1. Read Bearer token from Authorization header
  * 2. Verify JWT signature
- * 3. Check if session exists in Redis (not revoked)
- * 4. Attach user to request object
+ * 3. Check Redis session
+ * 4. Attach user to request
  */
 export const authenticate = async (
   req: Request,
@@ -31,44 +30,21 @@ export const authenticate = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // 1. Extract token
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw ApiError.unauthorized("No token provided. Please log in.");
+    // Read user ID from header
+    const userId = req.headers["x-user-id"] as string;
+
+    if (!userId) {
+      throw ApiError.unauthorized("No user ID provided. Please log in.");
     }
 
-    const token = authHeader.split(" ")[1];
-
-    // 2. Verify JWT
-    let decoded: any;
-    try {
-      decoded = jwt.verify(token, env.JWT_SECRET);
-    } catch (err: any) {
-      if (err.name === "TokenExpiredError") {
-        throw ApiError.unauthorized("Token expired. Please refresh.");
-      }
-      throw ApiError.unauthorized("Invalid token.");
-    }
-
-    // 3. Check Redis session (skip if Redis unavailable)
-    const sessionKey = `session:${decoded.userId}`;
-    const sessionExists = await redis.exists(sessionKey);
-
-    // If Redis is down, allow the request through (JWT is still valid)
-    // If Redis is up and session doesn't exist, token was revoked
-    if (sessionExists === false && await redis.get("__redis_ping__") !== null) {
-      // Redis is working but session not found — revoked
-      throw ApiError.unauthorized("Session expired. Please log in again.");
-    }
-
-    // 4. Attach user info to request
-    const user = await User.findById(decoded.userId).select("-password");
+    // Look up user in DB
+    const user = await User.findById(userId).select("-password");
     if (!user) {
-      throw ApiError.unauthorized("User no longer exists.");
+      throw ApiError.unauthorized("User not found.");
     }
 
     req.user = user;
-    req.userId = decoded.userId;
+    req.userId = userId;
     next();
   } catch (error) {
     next(error);
@@ -76,7 +52,7 @@ export const authenticate = async (
 };
 
 /**
- * Optional auth — doesn't throw if no token, but attaches user if valid.
+ * Optional auth — doesn't throw if no user ID, but attaches user if valid.
  */
 export const optionalAuth = async (
   req: Request,
@@ -84,18 +60,15 @@ export const optionalAuth = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const userId = req.headers["x-user-id"] as string;
+    if (!userId) {
       return next();
     }
 
-    const token = authHeader.split(" ")[1];
-    const decoded: any = jwt.verify(token, env.JWT_SECRET);
-    const user = await User.findById(decoded.userId).select("-password");
-
+    const user = await User.findById(userId).select("-password");
     if (user) {
       req.user = user;
-      req.userId = decoded.userId;
+      req.userId = userId;
     }
   } catch {
     // Silently continue without auth

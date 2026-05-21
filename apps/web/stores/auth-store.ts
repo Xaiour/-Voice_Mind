@@ -14,46 +14,50 @@ interface User {
 
 interface AuthState {
   user: User | null;
-  accessToken: string | null;
-  refreshToken: string | null;
+  userId: string | null;
   isAuthenticated: boolean;
   isHydrated: boolean;
 
   // Actions
   setUser: (user: User) => void;
-  setTokens: (accessToken: string, refreshToken: string) => void;
-  login: (user: User, accessToken: string, refreshToken: string) => void;
+  login: (user: User, userId: string) => void;
   logout: () => void;
   setHydrated: () => void;
 }
 
+/**
+ * Auth Store — Dummy auth mode (no JWT tokens).
+ *
+ * Stores userId + user object in localStorage via Zustand persist.
+ * The userId is sent as `x-user-id` header on API requests.
+ *
+ * TODO: When re-enabling JWT, add back:
+ * - accessToken: string | null
+ * - refreshToken: string | null
+ * - setTokens(accessToken, refreshToken)
+ * - Update login() to accept tokens
+ */
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
-      accessToken: null,
-      refreshToken: null,
+      userId: null,
       isAuthenticated: false,
       isHydrated: false,
 
       setUser: (user) => set({ user }),
 
-      setTokens: (accessToken, refreshToken) =>
-        set({ accessToken, refreshToken }),
-
-      login: (user, accessToken, refreshToken) =>
+      login: (user, userId) =>
         set({
           user,
-          accessToken,
-          refreshToken,
+          userId,
           isAuthenticated: true,
         }),
 
       logout: () =>
         set({
           user: null,
-          accessToken: null,
-          refreshToken: null,
+          userId: null,
           isAuthenticated: false,
         }),
 

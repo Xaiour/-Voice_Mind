@@ -1,14 +1,15 @@
-import jwt from "jsonwebtoken";
-import { v4 as uuidv4 } from "uuid";
-import { User, IUser } from "../models/User";
-import { redis } from "../config/redis";
-import { env } from "../config/env";
-import { ApiError } from "../utils/ApiError";
+/**
+ * Auth Service — Dummy auth (no JWT).
+ *
+ * Users are stored in MongoDB with hashed passwords.
+ * On login/register, we just return the user object + userId.
+ * No tokens, no Redis sessions.
+ *
+ * TODO: Re-enable JWT auth later by restoring token generation here.
+ */
 
-interface TokenPair {
-  accessToken: string;
-  refreshToken: string;
-}
+import { User, IUser } from "../models/User";
+import { ApiError } from "../utils/ApiError";
 
 interface RegisterInput {
   firstName: string;
@@ -26,8 +27,9 @@ interface LoginInput {
 export class AuthService {
   /**
    * Register a new user.
+   * Saves to DB with hashed password, returns user object.
    */
-  static async register(input: RegisterInput): Promise<{ user: IUser; tokens: TokenPair }> {
+  static async register(input: RegisterInput): Promise<{ user: IUser; userId: string }> {
     const { firstName, lastName, email, password, role } = input;
 
     // Check if user already exists
@@ -36,7 +38,7 @@ export class AuthService {
       throw ApiError.conflict("An account with this email already exists.");
     }
 
-    // Create user (password hashed via pre-save hook)
+    // Create user (password hashed via pre-save hook in User model)
     const user = await User.create({
       firstName,
       lastName,
@@ -45,20 +47,18 @@ export class AuthService {
       role: role || "therapist",
     });
 
-    // Generate tokens and create session
-    const tokens = await this.generateTokens(user._id.toString());
-
     // Remove password from response
     const userResponse = user.toObject();
     delete (userResponse as any).password;
 
-    return { user: userResponse as IUser, tokens };
+    return { user: userResponse as IUser, userId: user._id.toString() };
   }
 
   /**
    * Login an existing user.
+   * Checks email + password against DB, returns user object.
    */
-  static async login(input: LoginInput): Promise<{ user: IUser; tokens: TokenPair }> {
+  static async login(input: LoginInput): Promise<{ user: IUser; userId: string }> {
     const { email, password } = input;
 
     // Find user with password field
@@ -82,77 +82,18 @@ export class AuthService {
     user.lastLogin = new Date();
     await user.save();
 
-    // Generate tokens and create session
-    const tokens = await this.generateTokens(user._id.toString());
-
     // Remove password from response
     const userResponse = user.toObject();
     delete (userResponse as any).password;
 
-    return { user: userResponse as IUser, tokens };
+    return { user: userResponse as IUser, userId: user._id.toString() };
   }
 
   /**
-   * Logout — destroy Redis session.
+   * Logout — no-op for dummy auth.
+   * TODO: Clear Redis session when JWT is re-enabled.
    */
-  static async logout(userId: string): Promise<void> {
-    const sessionKey = `session:${userId}`;
-    await redis.del(sessionKey);
-  }
-
-  /**
-   * Refresh access token using refresh token.
-   */
-  static async refreshToken(refreshToken: string): Promise<TokenPair> {
-    try {
-      const decoded: any = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET);
-      const userId = decoded.userId;
-
-      // Check session still exists
-      const sessionExists = await redis.exists(`session:${userId}`);
-      if (!sessionExists) {
-        throw ApiError.unauthorized("Session expired. Please log in again.");
-      }
-
-      // Generate new token pair
-      return this.generateTokens(userId);
-    } catch (error) {
-      throw ApiError.unauthorized("Invalid refresh token.");
-    }
-  }
-
-  /**
-   * Generate JWT access and refresh tokens + store session in Redis.
-   */
-  private static async generateTokens(userId: string): Promise<TokenPair> {
-    const tokenId = uuidv4();
-
-    // Access token (short-lived)
-    const accessToken = jwt.sign(
-      { userId, tokenId, type: "access" },
-      env.JWT_SECRET,
-      { expiresIn: "15m" }
-    );
-
-    // Refresh token (long-lived)
-    const refreshToken = jwt.sign(
-      { userId, tokenId, type: "refresh" },
-      env.JWT_REFRESH_SECRET,
-      { expiresIn: env.JWT_REFRESH_EXPIRES_IN }
-    );
-
-    // Store session in Redis with TTL (non-blocking — OK if Redis is down)
-    const sessionKey = `session:${userId}`;
-    try {
-      await redis.set(
-        sessionKey,
-        JSON.stringify({ tokenId, createdAt: Date.now() }),
-        env.SESSION_TTL
-      );
-    } catch {
-      // Redis unavailable — sessions won't be revocable but auth still works
-    }
-
-    return { accessToken, refreshToken };
+  static async logout(_userId: string): Promise<void> {
+    // No-op — no sessions to destroy in dummy auth mode
   }
 }

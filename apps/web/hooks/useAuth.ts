@@ -10,8 +10,13 @@ interface RegisterData {
 }
 
 /**
- * Authentication hook — handles login, register, logout.
- * Connects to the Zustand auth store and API client.
+ * Authentication hook — Dummy auth mode.
+ *
+ * Handles login, register, logout.
+ * Stores userId (no tokens) via Zustand auth store.
+ *
+ * TODO: When re-enabling JWT, update to extract accessToken/refreshToken
+ * from API response and pass them to storeLogin().
  */
 export function useAuth() {
   const [isLoading, setIsLoading] = useState(false);
@@ -21,8 +26,8 @@ export function useAuth() {
     setIsLoading(true);
     try {
       const { data } = await api.post("/auth/login", { email, password });
-      const { user, accessToken, refreshToken } = data.data;
-      storeLogin(user, accessToken, refreshToken);
+      const { user, userId } = data.data;
+      storeLogin(user, userId);
       return user;
     } finally {
       setIsLoading(false);
@@ -33,8 +38,8 @@ export function useAuth() {
     setIsLoading(true);
     try {
       const { data } = await api.post("/auth/register", formData);
-      const { user, accessToken, refreshToken } = data.data;
-      storeLogin(user, accessToken, refreshToken);
+      const { user, userId } = data.data;
+      storeLogin(user, userId);
       return user;
     } finally {
       setIsLoading(false);

@@ -20,14 +20,10 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
-const refreshSchema = z.object({
-  refreshToken: z.string().min(1, "Refresh token is required"),
-});
-
 // ─── Routes ─────────────────────────────────────────────────
 router.post("/register", validate({ body: registerSchema }), AuthController.register);
 router.post("/login", validate({ body: loginSchema }), AuthController.login);
-router.post("/logout", authenticate, AuthController.logout);
-router.post("/refresh", validate({ body: refreshSchema }), AuthController.refresh);
+router.post("/logout", AuthController.logout);
+router.post("/refresh", AuthController.refresh);
 
 export default router;

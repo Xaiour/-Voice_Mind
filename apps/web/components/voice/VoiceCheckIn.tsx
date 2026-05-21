@@ -216,13 +216,13 @@ export function VoiceCheckIn() {
 
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
-      // Get token from localStorage (Zustand persists here)
+      // Get userId from localStorage (Zustand persists here)
       const authData = localStorage.getItem("voicemind-auth");
-      const token = authData ? JSON.parse(authData)?.state?.accessToken : null;
+      const userId = authData ? JSON.parse(authData)?.state?.userId : null;
 
       const uploadRes = await fetch(`${API_URL}/voice/upload`, {
         method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: userId ? { "x-user-id": userId } : {},
         body: formData,
       });
 
@@ -243,7 +243,7 @@ export function VoiceCheckIn() {
         await new Promise((r) => setTimeout(r, 2000));
 
         const resultRes = await fetch(`${API_URL}/voice/analysis/${analysisId}`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          headers: userId ? { "x-user-id": userId } : {},
         });
 
         if (resultRes.ok) {

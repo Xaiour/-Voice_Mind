@@ -3,6 +3,7 @@ import authRoutes from "./auth.routes";
 import userRoutes from "./user.routes";
 import voiceRoutes from "./voice.routes";
 import aiRoutes from "./ai.routes";
+import wellnessRoutes from "./wellness.routes";
 
 const router = Router();
 
@@ -21,5 +22,6 @@ router.use("/auth", authRoutes);
 router.use("/users", userRoutes);
 router.use("/voice", voiceRoutes);
 router.use("/ai", aiRoutes);
+router.use("/wellness", wellnessRoutes);
 
 export default router;

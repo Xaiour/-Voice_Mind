@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { ParticleBackground } from "@/components/three-d";
 import {

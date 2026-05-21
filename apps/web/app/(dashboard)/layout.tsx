@@ -3,8 +3,6 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
-import { Sidebar } from "@/components/shared/Sidebar";
-import { Navbar } from "@/components/shared/Navbar";
 
 export default function DashboardLayout({
   children,
@@ -12,7 +10,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { user, isAuthenticated, isHydrated } = useAuthStore();
+  const { isAuthenticated, isHydrated } = useAuthStore();
 
   // Protect routes — redirect to login if not authenticated
   useEffect(() => {
@@ -24,19 +22,14 @@ export default function DashboardLayout({
   // Show nothing while checking auth
   if (!isHydrated || !isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#050510" }}>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 rounded-full border-2 border-cyan-400/30 border-t-cyan-400 animate-spin" />
+          <p className="text-sm text-slate-400">Authenticating...</p>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen flex bg-background">
-      <Sidebar />
-      <div className="flex-1 flex flex-col ml-64">
-        <Navbar user={user} />
-        <main className="flex-1 p-6 overflow-auto">{children}</main>
-      </div>
-    </div>
-  );
+  return <>{children}</>;
 }

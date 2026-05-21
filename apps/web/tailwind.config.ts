@@ -39,6 +39,10 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Antigravity neon colors
+        "neon-purple": "#7000ff",
+        "neon-cyan": "#00f0ff",
+        "neon-pink": "#ff007a",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -62,11 +66,21 @@ const config: Config = {
           "0%, 100%": { transform: "scaleY(1)" },
           "50%": { transform: "scaleY(2)" },
         },
+        float: {
+          "0%, 100%": { transform: "translateY(0px) rotate(0deg)" },
+          "50%": { transform: "translateY(-15px) rotate(1deg)" },
+        },
+        "pulse-glow": {
+          "0%, 100%": { opacity: "0.2", transform: "scale(1)" },
+          "50%": { opacity: "0.4", transform: "scale(1.05)" },
+        },
       },
       animation: {
         "fade-in": "fade-in 0.5s ease-out",
         "slide-in": "slide-in 0.3s ease-out",
         pulse_wave: "pulse_wave 1s ease-in-out infinite",
+        float: "float 6s ease-in-out infinite",
+        "pulse-glow": "pulse-glow 8s ease-in-out infinite",
       },
     },
   },

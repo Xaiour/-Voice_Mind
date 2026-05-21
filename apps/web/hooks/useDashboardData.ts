@@ -55,15 +55,15 @@ export function useDashboardData(): DashboardData {
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
       const authData = localStorage.getItem("voicemind-auth");
-      const token = authData ? JSON.parse(authData)?.state?.accessToken : null;
+      const userId = authData ? JSON.parse(authData)?.state?.userId : null;
 
-      if (!token) {
+      if (!userId) {
         setIsLoading(false);
         return;
       }
 
       const res = await fetch(`${API_URL}/voice/history?limit=50`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { "x-user-id": userId },
       });
 
       if (res.ok) {

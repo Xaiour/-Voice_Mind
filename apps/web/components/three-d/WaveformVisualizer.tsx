@@ -16,7 +16,7 @@ function VisualizerBars({ isRecording, onAudioData }: WaveformVisualizerProps) {
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
+  const dataArrayRef = useRef<Uint8Array | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -76,7 +76,7 @@ function VisualizerBars({ isRecording, onAudioData }: WaveformVisualizerProps) {
     let avgVol = 0;
 
     if (isRecording && analyserRef.current && dataArrayRef.current) {
-      analyserRef.current.getByteFrequencyData(dataArrayRef.current);
+      analyserRef.current.getByteFrequencyData(dataArrayRef.current as Uint8Array<ArrayBuffer>);
 
       const binSize = Math.floor(dataArrayRef.current.length / BAR_COUNT) || 1;
       let total = 0;

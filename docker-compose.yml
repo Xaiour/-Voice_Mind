@@ -1,23 +1,33 @@
-version: "3.9"
-
 services:
-  # ─── Next.js Frontend ───────────────────────────────
-  web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
+  # ─── MongoDB ────────────────────────────────────────
+  mongo:
+    image: mongo:7
     ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://api:8000
-    depends_on:
-      - api
+      - "27017:27017"
     volumes:
-      - ./apps/web:/app/apps/web
-      - ./packages:/app/packages
+      - mongo-data:/data/db
     networks:
       - voicemind-network
+    healthcheck:
+      test: mongosh --eval "db.adminCommand('ping')" --quiet
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis ──────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - voicemind-network
+    healthcheck:
+      test: redis-cli ping
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   # ─── Express.js API ─────────────────────────────────
   api:
@@ -28,16 +38,18 @@ services:
       - "8000:8000"
     environment:
       - NODE_ENV=development
-      - MONGODB_URI=${MONGODB_URI}
-      - REDIS_URL=${REDIS_URL}
-      - JWT_SECRET=${JWT_SECRET}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PORT=8000
+      - MONGODB_URI=mongodb://mongo:27017/voicemind
+      - REDIS_URL=redis://redis:6379
       - VOICE_SERVICE_URL=http://voice:8001
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - UPLOAD_DIR=/app/uploads
     depends_on:
-      - redis
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
-      - ./apps/api:/app/apps/api
-      - ./packages:/app/packages
       - uploads:/app/uploads
     networks:
       - voicemind-network
@@ -53,38 +65,29 @@ services:
       - PYTHONUNBUFFERED=1
       - MODEL_PATH=/app/models
     volumes:
-      - ./services/voice-analysis:/app
       - voice-models:/app/models
     networks:
       - voicemind-network
 
-  # ─── Redis (local dev) ──────────────────────────────
-  redis:
-    image: redis:7-alpine
+  # ─── Next.js Frontend ───────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
     ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    networks:
-      - voicemind-network
-
-  # ─── MongoDB (local dev) ────────────────────────────
-  mongo:
-    image: mongo:7
-    ports:
-      - "27017:27017"
+      - "3000:3000"
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=password
-    volumes:
-      - mongo-data:/data/db
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+    depends_on:
+      - api
     networks:
       - voicemind-network
 
 volumes:
-  uploads:
-  redis-data:
   mongo-data:
+  redis-data:
+  uploads:
   voice-models:
 
 networks:

@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+*.log
+.env
+.env.local
+apps/web/.env.local
+apps/web/.next
+apps/web/node_modules
+apps/api/node_modules
+services/voice-analysis/__pycache__
+services/voice-analysis/.venv

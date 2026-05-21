@@ -1,28 +1,27 @@
-FROM node:20-alpine AS base
+FROM node:20-alpine
+
 WORKDIR /app
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+
+# Copy workspace root files
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
+COPY turbo.json tsconfig.json ./
+
+# Copy packages (shared types/utils)
+COPY packages/ ./packages/
+
+# Copy API app
+COPY apps/api/ ./apps/api/
 
 # Install dependencies
-COPY package.json package-lock.json* ./
-COPY apps/api/package.json ./apps/api/
-COPY packages/ ./packages/
-RUN npm install --workspace=@voicemind/api
+RUN pnpm install --frozen-lockfile || pnpm install
 
-# Build
-FROM base AS builder
-COPY apps/api/ ./apps/api/
-COPY packages/ ./packages/
-RUN npm run build --workspace=@voicemind/api
-
-# Production
-FROM node:20-alpine AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-
-COPY --from=builder /app/apps/api/dist ./dist
-COPY --from=builder /app/apps/api/package.json ./
-COPY --from=builder /app/node_modules ./node_modules
-
+# Create uploads directory
 RUN mkdir -p uploads
 
 EXPOSE 8000
-CMD ["node", "dist/server.js"]
+
+# Run in dev mode (ts-node / tsx) since we don't have a build step
+CMD ["pnpm", "--filter", "@voicemind/api", "dev"]

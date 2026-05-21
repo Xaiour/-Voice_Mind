@@ -4,6 +4,7 @@ import userRoutes from "./user.routes";
 import voiceRoutes from "./voice.routes";
 import aiRoutes from "./ai.routes";
 import wellnessRoutes from "./wellness.routes";
+import wellnessChatRoutes from "./wellness-chat.routes";
 
 const router = Router();
 
@@ -23,5 +24,6 @@ router.use("/users", userRoutes);
 router.use("/voice", voiceRoutes);
 router.use("/ai", aiRoutes);
 router.use("/wellness", wellnessRoutes);
+router.use("/wellness", wellnessChatRoutes);
 
 export default router;

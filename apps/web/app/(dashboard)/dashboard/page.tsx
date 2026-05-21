@@ -4,46 +4,16 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useDashboardData } from "@/hooks/useDashboardData";
-import { FloatingCard } from "@/components/three-d";
 import { ParticleBackground } from "@/components/three-d";
+import {
+  AreaChart, Area, BarChart, Bar, RadialBarChart, RadialBar,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+} from "recharts";
 
-// Dynamic imports for heavy Three.js components
+// Dynamic import for the small orb (constrained size)
 const EmotionalOrb = dynamic(() => import("@/components/three-d/EmotionalOrb"), { ssr: false });
-const WaveformVisualizer = dynamic(() => import("@/components/three-d/WaveformVisualizer"), { ssr: false });
 
 type EmotionType = "calm" | "energetic" | "anxious" | "joyful";
-
-interface VoiceLog {
-  id: string;
-  title: string;
-  emotion: EmotionType;
-  duration: string;
-  time: string;
-  vibeScore: number;
-}
-
-const emotionInsights: Record<EmotionType, { text: string; details: string; color: string }> = {
-  calm: {
-    text: "Resonance matches Alpha brain rhythms (8.5Hz). Low acoustic jitter.",
-    details: "Your vocal pattern suggests high clarity, low stress, and deep physical stability.",
-    color: "text-cyan-400 border-cyan-500/20 bg-cyan-950/20",
-  },
-  energetic: {
-    text: "High velocity speaking rate. Micro-pitch peaks positive.",
-    details: "Your vocal frequency is accelerated, showing high enthusiasm, speed, and creative focus.",
-    color: "text-pink-400 border-pink-500/20 bg-pink-950/20",
-  },
-  anxious: {
-    text: "Irregular wave intervals. Vocal pitch show micro-tremors.",
-    details: "Your resonance pattern indicates elevated cortisol signatures. Try 4-7-8 breathing exercises.",
-    color: "text-purple-400 border-purple-500/20 bg-purple-950/20",
-  },
-  joyful: {
-    text: "Perfect harmonic stability. Peak resonant amplification.",
-    details: "Acoustic signatures show high emotional variance paired with strong wave coherence.",
-    color: "text-yellow-400 border-yellow-500/20 bg-yellow-950/20",
-  },
-};
 
 function mapEmotionToType(emotion: string | undefined): EmotionType {
   if (!emotion) return "calm";
@@ -57,64 +27,50 @@ function mapEmotionToType(emotion: string | undefined): EmotionType {
 export default function DashboardPage() {
   const { analyses, latest, isLoading, stats } = useDashboardData();
   const [activeEmotion, setActiveEmotion] = useState<EmotionType>("calm");
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const [avgAudioVolume, setAvgAudioVolume] = useState(0);
 
-  // Derive emotion from latest analysis
   useEffect(() => {
     if (latest?.emotions?.primary) {
       setActiveEmotion(mapEmotionToType(latest.emotions.primary));
     }
   }, [latest]);
 
-  // Build voice logs from real data
-  const voiceLogs: VoiceLog[] = analyses
-    .filter((a) => a.status === "completed")
-    .slice(0, 5)
-    .map((a) => ({
-      id: a._id,
-      title: a.audioFileName || "Voice Entry.wav",
-      emotion: mapEmotionToType(a.emotions?.primary),
-      duration: a.voiceFeatures?.speakingRate
-        ? `${Math.round(a.voiceFeatures.speakingRate)}s`
-        : "0:30",
-      time: new Date(a.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      vibeScore: Math.round((a.aiInsights?.sentimentScore || 5) * 10),
-    }));
+  // Build chart data from analyses (last 7 sessions or mock data)
+  const moodTrendData = analyses.length > 0
+    ? analyses.slice(0, 7).reverse().map((a, i) => ({
+        session: `S${i + 1}`,
+        mood: Math.round((a.aiInsights?.sentimentScore || 5) * 10),
+        stress: Math.round(100 - (a.aiInsights?.sentimentScore || 5) * 10),
+        energy: Math.round((1 - (a.emotions?.distribution?.sad || 0)) * 100),
+      }))
+    : [
+        { session: "S1", mood: 65, stress: 35, energy: 72 },
+        { session: "S2", mood: 58, stress: 42, energy: 68 },
+        { session: "S3", mood: 72, stress: 28, energy: 78 },
+        { session: "S4", mood: 45, stress: 55, energy: 52 },
+        { session: "S5", mood: 80, stress: 20, energy: 85 },
+        { session: "S6", mood: 68, stress: 32, energy: 74 },
+        { session: "S7", mood: 75, stress: 25, energy: 80 },
+      ];
 
-  // Timer logic for recording
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isRecording) {
-      interval = setInterval(() => {
-        setRecordingSeconds((prev) => prev + 1);
-      }, 1000);
-    } else {
-      setRecordingSeconds(0);
-    }
-    return () => clearInterval(interval);
-  }, [isRecording]);
+  // Voice metrics from latest analysis
+  const voiceMetrics = latest?.voiceFeatures
+    ? [
+        { name: "Pitch", value: Math.round(latest.voiceFeatures.pitch?.mean || 142), unit: "Hz", max: 300 },
+        { name: "Energy", value: Math.round((latest.voiceFeatures.energy?.mean || 0.06) * 1000), unit: "mW", max: 100 },
+        { name: "Speech Rate", value: Math.round(latest.voiceFeatures.speakingRate || 3.4), unit: "syl/s", max: 8 },
+        { name: "Pauses", value: Math.round((latest.voiceFeatures.pauseFrequency || 0.28) * 100), unit: "%", max: 100 },
+      ]
+    : [
+        { name: "Pitch", value: 142, unit: "Hz", max: 300 },
+        { name: "Energy", value: 60, unit: "mW", max: 100 },
+        { name: "Speech Rate", value: 3, unit: "syl/s", max: 8 },
+        { name: "Pauses", value: 28, unit: "%", max: 100 },
+      ];
 
-  const toggleRecording = () => {
-    if (isRecording) {
-      setIsRecording(false);
-      // Redirect to voice check-in for proper upload flow
-      window.location.href = "/voice";
-    } else {
-      setIsRecording(true);
-    }
-  };
-
-  const formatTime = (totalSecs: number) => {
-    const mins = Math.floor(totalSecs / 60);
-    const secs = totalSecs % 60;
-    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
-  };
-
-  const handleAudioData = (volume: number) => {
-    setAvgAudioVolume(volume);
-  };
+  // Radial data for the wellness score
+  const wellnessRadial = [
+    { name: "score", value: stats.moodScore || 50, fill: "#00f0ff" },
+  ];
 
   if (isLoading) {
     return (
@@ -128,35 +84,27 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="relative min-h-screen text-slate-100 flex flex-col font-sans select-none overflow-x-hidden">
-      {/* 3D Particle Background */}
+    <div className="relative min-h-screen text-slate-100 font-sans select-none overflow-x-hidden" style={{ backgroundColor: "#050510" }}>
       <ParticleBackground />
 
-      {/* Navigation Header */}
-      <header className="w-full px-6 py-4">
+      {/* Header */}
+      <header className="w-full px-6 py-4 relative z-10">
         <nav className="max-w-7xl mx-auto flex items-center justify-between px-6 py-3 rounded-full glass-panel">
           <div className="flex items-center gap-3">
             <Link href="/" className="text-sm font-semibold text-slate-400 hover:text-slate-200 transition-colors">
               &larr; Home
             </Link>
             <div className="w-[1px] h-4 bg-slate-800" />
-            <span className="text-sm font-bold bg-neon-gradient text-transparent bg-clip-text">
-              Dashboard / Console
-            </span>
+            <span className="text-sm font-bold text-neon-gradient">Dashboard</span>
           </div>
-
           <div className="flex items-center gap-4">
             <Link
               href="/voice"
-              className="flex items-center gap-2 px-3 py-1 rounded-full border border-purple-500/20 bg-purple-950/20 text-[10px] font-semibold text-purple-300 hover:border-purple-500/40 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-full border border-purple-500/30 bg-purple-950/20 text-xs font-semibold text-purple-300 hover:border-purple-500/50 transition-colors"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-              Voice Check-In
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+              New Check-In
             </Link>
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/20 bg-emerald-950/20 text-[10px] font-semibold text-emerald-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              AI Core Online
-            </div>
             <Link
               href="/settings"
               className="w-8 h-8 rounded-full border border-slate-700 bg-slate-900 flex items-center justify-center font-bold text-xs text-slate-300 hover:border-slate-600 transition-colors"
@@ -167,244 +115,223 @@ export default function DashboardPage() {
         </nav>
       </header>
 
-      {/* Main Dashboard Layout */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-6 py-4 grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10">
-        {/* LEFT COLUMN: 3D Orb & Selector */}
-        <section className="lg:col-span-5 flex flex-col gap-6">
-          <FloatingCard
-            glowColor={
-              activeEmotion === "calm"
-                ? "cyan"
-                : activeEmotion === "energetic"
-                ? "pink"
-                : activeEmotion === "anxious"
-                ? "purple"
-                : "cyan"
-            }
-            floatDelay={0}
-            className="flex-1 flex flex-col justify-between h-[450px]"
-          >
-            <div className="flex flex-col gap-2">
-              <h2 className="text-lg font-bold text-slate-200">
-                Cognitive Resonance Orb
-              </h2>
-              <p className="text-slate-500 text-xs">
-                {stats.totalSessions > 0
-                  ? `Based on ${stats.totalSessions} sessions analyzed`
-                  : "Shows active neural signature deforming volumetric shapes."}
+      {/* Dashboard Content */}
+      <main className="w-full max-w-7xl mx-auto px-6 py-6 relative z-10 flex flex-col gap-6">
+
+        {/* ROW 1: Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Wellness Score */}
+          <div className="glass-card rounded-2xl p-5 flex flex-col items-center justify-center gap-2">
+            <div className="w-20 h-20 relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadialBarChart cx="50%" cy="50%" innerRadius="70%" outerRadius="100%" data={wellnessRadial} startAngle={90} endAngle={-270}>
+                  <RadialBar background={{ fill: "rgba(255,255,255,0.05)" }} dataKey="value" cornerRadius={10} />
+                </RadialBarChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-lg font-extrabold text-cyan-400">{stats.moodScore || "--"}</span>
+              </div>
+            </div>
+            <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Wellness</span>
+          </div>
+
+          {/* Stress */}
+          <div className="glass-card rounded-2xl p-5 flex flex-col justify-between">
+            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Stress</span>
+            <span className="text-3xl font-extrabold text-slate-100">{stats.stressLevel || "--"}<span className="text-sm text-slate-500">%</span></span>
+            <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
+              <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-rose-500 transition-all duration-700" style={{ width: `${stats.stressLevel || 0}%` }} />
+            </div>
+            <span className="text-[9px] text-slate-500">{stats.stressLevel < 30 ? "Low" : stats.stressLevel < 60 ? "Moderate" : "High"}</span>
+          </div>
+
+          {/* Sessions */}
+          <div className="glass-card rounded-2xl p-5 flex flex-col justify-between">
+            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Sessions</span>
+            <span className="text-3xl font-extrabold text-slate-100">{stats.totalSessions}</span>
+            <span className="text-[9px] text-slate-500">Total recordings analyzed</span>
+          </div>
+
+          {/* Energy */}
+          <div className="glass-card rounded-2xl p-5 flex flex-col justify-between">
+            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Energy</span>
+            <span className="text-3xl font-extrabold text-slate-100">{stats.energyLevel || "--"}<span className="text-sm text-slate-500">%</span></span>
+            <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
+              <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-cyan-400 transition-all duration-700" style={{ width: `${stats.energyLevel || 0}%` }} />
+            </div>
+            <span className="text-[9px] text-slate-500">{stats.energyLevel > 70 ? "High" : stats.energyLevel > 40 ? "Normal" : "Low"}</span>
+          </div>
+        </div>
+
+        {/* ROW 2: Mood Trend Chart + Emotional Orb */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Mood Trend - Takes 2 cols */}
+          <div className="lg:col-span-2 glass-card rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-sm font-bold text-slate-200">Mood & Stress Trend</h3>
+                <p className="text-[10px] text-slate-500">Last {moodTrendData.length} sessions</p>
+              </div>
+              <div className="flex items-center gap-4 text-[10px]">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-cyan-400" />Mood</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400" />Stress</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-400" />Energy</span>
+              </div>
+            </div>
+            <div className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={moodTrendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="moodGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#00f0ff" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#00f0ff" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="stressGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                  <XAxis dataKey="session" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} domain={[0, 100]} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: "#0a0a1a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "11px" }}
+                    labelStyle={{ color: "#94a3b8" }}
+                  />
+                  <Area type="monotone" dataKey="mood" stroke="#00f0ff" fill="url(#moodGrad)" strokeWidth={2} dot={false} />
+                  <Area type="monotone" dataKey="stress" stroke="#f43f5e" fill="url(#stressGrad)" strokeWidth={2} dot={false} />
+                  <Area type="monotone" dataKey="energy" stroke="#a855f7" fill="none" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Emotional State Orb - Constrained */}
+          <div className="glass-card rounded-2xl p-5 flex flex-col justify-between overflow-hidden">
+            <div>
+              <h3 className="text-sm font-bold text-slate-200">Current State</h3>
+              <p className="text-[10px] text-slate-500 mt-1">
+                {latest?.emotions?.primary ? `Detected: ${latest.emotions.primary}` : "No analysis yet"}
               </p>
             </div>
-
-            {/* 3D Orb Canvas */}
-            <div className="flex-1 min-h-[220px] relative flex items-center justify-center">
-              <div
-                className="absolute w-44 h-44 rounded-full bg-gradient-to-tr from-cyan-500/10 to-purple-500/10 blur-3xl transition-transform duration-100"
-                style={{
-                  transform: `scale(${1 + avgAudioVolume * 1.5})`,
-                }}
-              />
-              <EmotionalOrb emotion={activeEmotion} interactive={true} />
+            <div className="h-[140px] w-full relative">
+              <EmotionalOrb emotion={activeEmotion} interactive={false} />
             </div>
-
-            {/* Selector Grid */}
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-1">
               {(["calm", "energetic", "anxious", "joyful"] as EmotionType[]).map((emo) => (
                 <button
                   key={emo}
                   onClick={() => setActiveEmotion(emo)}
-                  className={`py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all duration-300 border ${
+                  className={`py-1.5 rounded-lg text-[8px] font-bold uppercase tracking-wider transition-all border ${
                     activeEmotion === emo
-                      ? "bg-slate-100 border-slate-100 text-slate-950 shadow-[0_0_12px_rgba(255,255,255,0.15)]"
-                      : "bg-slate-950/40 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                      ? "bg-slate-100 border-slate-100 text-slate-950"
+                      : "bg-transparent border-slate-800 text-slate-500 hover:border-slate-700"
                   }`}
                 >
                   {emo}
                 </button>
               ))}
             </div>
-          </FloatingCard>
+          </div>
+        </div>
 
-          {/* Neuro Diagnostics Card */}
-          <FloatingCard floatDelay={1.0} className="flex flex-col gap-3">
-            <h3 className="text-sm font-bold text-slate-300">
-              Acoustic Resonance Insights
-            </h3>
-            <div className={`p-4 border rounded-2xl ${emotionInsights[activeEmotion].color} transition-all duration-300`}>
-              <p className="text-xs font-semibold leading-normal">
-                {emotionInsights[activeEmotion].text}
-              </p>
+        {/* ROW 3: Voice Metrics Bar Chart + Recent Logs */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Voice Metrics */}
+          <div className="glass-card rounded-2xl p-6">
+            <h3 className="text-sm font-bold text-slate-200 mb-1">Voice Biomarkers</h3>
+            <p className="text-[10px] text-slate-500 mb-4">Acoustic features from {latest ? "latest" : "sample"} analysis</p>
+            <div className="h-[180px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={voiceMetrics} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: "#0a0a1a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "11px" }}
+                    formatter={(value: number, name: string, props: any) => [`${value} ${props.payload.unit}`, name]}
+                  />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]} fill="url(#barGrad)" />
+                  <defs>
+                    <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#a855f7" />
+                      <stop offset="100%" stopColor="#7000ff" />
+                    </linearGradient>
+                  </defs>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              {emotionInsights[activeEmotion].details}
-            </p>
-          </FloatingCard>
-        </section>
+          </div>
 
-        {/* RIGHT COLUMN: Recorder & Cards */}
-        <section className="lg:col-span-7 flex flex-col gap-6">
-
-          {/* Volumetric Waveform Recorder Card */}
-          <FloatingCard glowColor={isRecording ? "pink" : "none"} floatDelay={0.5} className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-slate-200">Volumetric Voice Recorder</h2>
-                <p className="text-slate-500 text-xs">
-                  Speak to deform the 3D frequency mesh grid.
-                </p>
-              </div>
-
-              {isRecording && (
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-xs font-semibold text-rose-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
-                  REC {formatTime(recordingSeconds)}
-                </div>
+          {/* Recent Sessions */}
+          <div className="glass-card rounded-2xl p-6 flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-slate-200">Recent Sessions</h3>
+              {analyses.length > 0 && (
+                <Link href="/voice/history" className="text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors">
+                  View all &rarr;
+                </Link>
               )}
             </div>
 
-            {/* 3D Waveform Canvas */}
-            <div className="h-[220px] bg-slate-950/30 rounded-2xl border border-slate-900 relative overflow-hidden flex items-center justify-center">
-              <WaveformVisualizer isRecording={isRecording} onAudioData={handleAudioData} />
-            </div>
-
-            {/* Control Panel */}
-            <div className="flex flex-col sm:flex-row items-center gap-4 justify-between pt-2">
-              <span className="text-[11px] text-slate-400">
-                {isRecording ? "Listening to microphone input..." : "Click record to analyze vocal resonance."}
-              </span>
-
-              <div className="flex gap-3">
-                <Link
-                  href="/voice"
-                  className="px-6 py-3 rounded-full font-bold text-xs bg-purple-500/10 border border-purple-500/30 text-purple-300 hover:bg-purple-500/20 transition-all duration-300"
-                >
-                  Full Check-In
-                </Link>
-                <button
-                  onClick={toggleRecording}
-                  className={`px-8 py-3 rounded-full font-bold text-xs transition-all duration-300 shadow-md ${
-                    isRecording
-                      ? "bg-rose-500 text-slate-100 hover:bg-rose-600 shadow-[0_0_20px_rgba(244,63,94,0.3)]"
-                      : "bg-slate-100 text-slate-950 hover:bg-slate-200 shadow-[0_0_25px_rgba(255,255,255,0.1)]"
-                  }`}
-                >
-                  {isRecording ? "Stop & Analyze" : "Quick Record"}
-                </button>
-              </div>
-            </div>
-          </FloatingCard>
-
-          {/* Grid Panel for secondary data elements */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-            {/* Stats Dashboard Card - Connected to real data */}
-            <FloatingCard floatDelay={1.5} className="flex flex-col gap-4 justify-between h-[230px]">
-              <h3 className="text-sm font-bold text-slate-300">Live Coherence Index</h3>
-
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-extrabold text-slate-100 tracking-tight">
-                  {stats.totalSessions > 0 ? stats.moodScore : "--"}
-                </span>
-                <span className="text-xs text-cyan-400 font-bold">
-                  {stats.totalSessions > 0 ? "/100" : ""}
-                </span>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <div className="flex justify-between text-[10px] text-slate-400 font-semibold">
-                  <span>STRESS LEVEL</span>
-                  <span>
-                    {stats.totalSessions > 0
-                      ? `${stats.stressLevel}% (${stats.stressLevel < 30 ? "LOW" : stats.stressLevel < 60 ? "MODERATE" : "HIGH"})`
-                      : "NO DATA"}
-                  </span>
-                </div>
-                <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-cyan-400 to-purple-500 transition-all duration-500"
-                    style={{ width: `${stats.stressLevel || 0}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-between border-t border-slate-900 pt-3 text-[10px] text-slate-400">
-                <div>
-                  <div className="font-bold text-slate-300">{stats.totalSessions}</div>
-                  <div>Sessions</div>
-                </div>
-                <div>
-                  <div className="font-bold text-slate-300">{stats.avgSentiment}</div>
-                  <div>Avg Mood</div>
-                </div>
-                <div>
-                  <div className="font-bold text-slate-300">{stats.energyLevel}%</div>
-                  <div>Energy</div>
-                </div>
-              </div>
-            </FloatingCard>
-
-            {/* Audio History Logs - Connected to real data */}
-            <FloatingCard floatDelay={2.0} className="flex flex-col gap-3 justify-between h-[230px]">
-              <h3 className="text-sm font-bold text-slate-300">Acoustic Diary Logs</h3>
-
-              <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto pr-1">
-                {voiceLogs.length === 0 ? (
-                  <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center">
-                    <div className="w-8 h-8 rounded-full border border-slate-800 flex items-center justify-center">
-                      <span className="text-xs text-slate-600">&#127908;</span>
-                    </div>
-                    <p className="text-[11px] text-slate-500">No recordings yet</p>
-                    <Link href="/voice" className="text-[10px] text-purple-400 hover:text-purple-300 transition-colors">
-                      Start your first check-in &rarr;
-                    </Link>
+            <div className="flex-1 flex flex-col gap-3 overflow-y-auto">
+              {analyses.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center py-8">
+                  <div className="w-12 h-12 rounded-full border border-slate-800 flex items-center justify-center text-2xl">
+                    🎙️
                   </div>
-                ) : (
-                  voiceLogs.map((log) => {
-                    const tagColors: Record<EmotionType, string> = {
-                      calm: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
-                      energetic: "bg-pink-500/10 text-pink-400 border-pink-500/20",
-                      anxious: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-                      joyful: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
-                    };
-
-                    return (
-                      <div
-                        key={log.id}
-                        className="flex items-center justify-between p-2 rounded-xl bg-slate-950/20 border border-slate-900 hover:border-slate-800 transition-colors"
-                      >
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-[11px] font-bold text-slate-200 truncate max-w-[130px]">
-                            {log.title}
-                          </span>
-                          <span className="text-[9px] text-slate-500">
-                            {log.time} &middot; {log.duration}
-                          </span>
-                        </div>
-                        <span className={`px-2 py-0.5 border rounded-full text-[9px] font-extrabold uppercase tracking-wide ${tagColors[log.emotion]}`}>
-                          {log.emotion}
+                  <p className="text-sm text-slate-400">No sessions yet</p>
+                  <Link href="/voice" className="text-xs text-purple-400 hover:text-purple-300 px-4 py-2 rounded-full border border-purple-500/30 transition-colors">
+                    Record your first check-in
+                  </Link>
+                </div>
+              ) : (
+                analyses.slice(0, 5).map((a) => {
+                  const emotion = mapEmotionToType(a.emotions?.primary);
+                  const score = Math.round((a.aiInsights?.sentimentScore || 5) * 10);
+                  const colors: Record<EmotionType, string> = {
+                    calm: "text-cyan-400",
+                    energetic: "text-pink-400",
+                    anxious: "text-purple-400",
+                    joyful: "text-yellow-400",
+                  };
+                  return (
+                    <div key={a._id} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/30 border border-slate-900 hover:border-slate-800 transition-colors">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-xs font-semibold text-slate-200 truncate max-w-[180px]">
+                          {a.audioFileName || "Voice Recording"}
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          {new Date(a.createdAt).toLocaleDateString()} &middot; {a.emotions?.primary || "analyzing"}
                         </span>
                       </div>
-                    );
-                  })
-                )}
-              </div>
-
-              {voiceLogs.length > 0 && (
-                <Link
-                  href="/voice/history"
-                  className="text-[10px] text-center text-slate-500 hover:text-cyan-400 transition-colors"
-                >
-                  View all recordings &rarr;
-                </Link>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs font-bold ${colors[emotion]}`}>{score}/100</span>
+                        <span className={`w-2 h-2 rounded-full ${score > 60 ? "bg-emerald-400" : score > 40 ? "bg-amber-400" : "bg-rose-400"}`} />
+                      </div>
+                    </div>
+                  );
+                })
               )}
-            </FloatingCard>
-
+            </div>
           </div>
-        </section>
+        </div>
+
+        {/* ROW 4: Quick Action */}
+        <div className="glass-card rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <h3 className="text-sm font-bold text-slate-200">Ready for your next check-in?</h3>
+            <p className="text-[10px] text-slate-500 mt-1">Record a 30-second voice sample to update your wellness metrics.</p>
+          </div>
+          <Link
+            href="/voice"
+            className="px-8 py-3 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-bold text-xs hover:brightness-110 shadow-[0_0_25px_rgba(6,182,212,0.3)] transition-all duration-300 whitespace-nowrap"
+          >
+            Start Voice Check-In
+          </Link>
+        </div>
 
       </main>
-
-      {/* Decorative orb */}
-      <div className="absolute right-0 bottom-0 w-80 h-80 rounded-full bg-gradient-to-tr from-purple-500/5 to-pink-500/5 blur-3xl -z-10" />
     </div>
   );
 }

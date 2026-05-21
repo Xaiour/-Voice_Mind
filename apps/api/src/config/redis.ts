@@ -1,9 +1,8 @@
 import { Redis } from "@upstash/redis";
-import IORedis from "ioredis";
 import { env } from "./env";
 import { logger } from "../utils/logger";
 
-// ─── Upstash Redis (Production - REST-based) ────────────────
+// ─── Upstash Redis (REST-based — works everywhere, no TCP needed) ───
 let upstashClient: Redis | null = null;
 
 if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
@@ -11,125 +10,75 @@ if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
     url: env.UPSTASH_REDIS_REST_URL,
     token: env.UPSTASH_REDIS_REST_TOKEN,
   });
-  logger.info("Upstash Redis client initialized");
-}
-
-// ─── IORedis (Local development - TCP-based) ────────────────
-let ioRedisClient: IORedis | null = null;
-let redisAvailable = false;
-
-// Only try to connect if REDIS_URL is explicitly set AND not empty
-if (env.REDIS_URL && env.REDIS_URL !== "" && !upstashClient) {
-  try {
-    ioRedisClient = new IORedis(env.REDIS_URL, {
-      maxRetriesPerRequest: 1,
-      retryStrategy(times) {
-        if (times > 1) {
-          // Stop retrying — Redis is not available
-          logger.warn("Redis not available. Running without Redis (sessions stored in memory).");
-          redisAvailable = false;
-          return null; // Stop retrying
-        }
-        return 500;
-      },
-      lazyConnect: true,
-      connectTimeout: 3000,
-    });
-
-    ioRedisClient.on("connect", () => {
-      logger.info("IORedis connected");
-      redisAvailable = true;
-    });
-
-    ioRedisClient.on("error", (err) => {
-      // Silently handle — don't crash the app
-      redisAvailable = false;
-    });
-
-    // Try to connect (non-blocking)
-    ioRedisClient.connect().catch(() => {
-      redisAvailable = false;
-      ioRedisClient = null;
-      logger.warn("Redis unavailable — app will work without caching/sessions in Redis.");
-    });
-  } catch {
-    ioRedisClient = null;
-    redisAvailable = false;
-    logger.warn("Redis initialization failed — running without Redis.");
-  }
-} else if (!upstashClient) {
+  logger.info("Upstash Redis client initialized (REST)");
+} else {
   logger.info("No Redis configured — running without Redis (OK for development).");
 }
 
 // ─── Unified Redis Service ──────────────────────────────────
+// All methods are safe to call even when Redis is unavailable.
+// They return sensible defaults (null, false, 0) when no client exists.
+
 export const redis = {
   async get(key: string): Promise<string | null> {
-    if (upstashClient) {
-      return upstashClient.get(key);
+    if (!upstashClient) return null;
+    try {
+      return await upstashClient.get(key);
+    } catch (err) {
+      logger.warn("Redis GET failed:", (err as Error).message);
+      return null;
     }
-    if (ioRedisClient) {
-      return ioRedisClient.get(key);
-    }
-    return null;
   },
 
   async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
-    if (upstashClient) {
+    if (!upstashClient) return;
+    try {
       if (ttlSeconds) {
         await upstashClient.set(key, value, { ex: ttlSeconds });
       } else {
         await upstashClient.set(key, value);
       }
-      return;
-    }
-    if (ioRedisClient) {
-      if (ttlSeconds) {
-        await ioRedisClient.set(key, value, "EX", ttlSeconds);
-      } else {
-        await ioRedisClient.set(key, value);
-      }
+    } catch (err) {
+      logger.warn("Redis SET failed:", (err as Error).message);
     }
   },
 
   async del(key: string): Promise<void> {
-    if (upstashClient) {
+    if (!upstashClient) return;
+    try {
       await upstashClient.del(key);
-      return;
-    }
-    if (ioRedisClient) {
-      await ioRedisClient.del(key);
+    } catch (err) {
+      logger.warn("Redis DEL failed:", (err as Error).message);
     }
   },
 
   async exists(key: string): Promise<boolean> {
-    if (upstashClient) {
+    if (!upstashClient) return true; // Allow through when no Redis
+    try {
       const result = await upstashClient.exists(key);
       return result === 1;
+    } catch (err) {
+      logger.warn("Redis EXISTS failed:", (err as Error).message);
+      return true; // Fail open — allow request through
     }
-    if (ioRedisClient) {
-      const result = await ioRedisClient.exists(key);
-      return result === 1;
-    }
-    return false;
   },
 
   async incr(key: string): Promise<number> {
-    if (upstashClient) {
-      return upstashClient.incr(key);
+    if (!upstashClient) return 0;
+    try {
+      return await upstashClient.incr(key);
+    } catch (err) {
+      logger.warn("Redis INCR failed:", (err as Error).message);
+      return 0;
     }
-    if (ioRedisClient) {
-      return ioRedisClient.incr(key);
-    }
-    return 0;
   },
 
   async expire(key: string, ttlSeconds: number): Promise<void> {
-    if (upstashClient) {
+    if (!upstashClient) return;
+    try {
       await upstashClient.expire(key, ttlSeconds);
-      return;
-    }
-    if (ioRedisClient) {
-      await ioRedisClient.expire(key, ttlSeconds);
+    } catch (err) {
+      logger.warn("Redis EXPIRE failed:", (err as Error).message);
     }
   },
 };

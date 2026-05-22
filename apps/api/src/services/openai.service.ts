@@ -86,7 +86,6 @@ Provide your clinical analysis in JSON format.`;
         ],
         temperature: 0.3, // Low temp for consistent clinical output
         max_tokens: 1000,
-        response_format: { type: "json_object" },
       });
 
       const content = response.choices[0]?.message?.content;
@@ -152,10 +151,14 @@ ${input.emotionalContext ? `The user's latest voice analysis detected: ${input.e
 
     try {
       // Check if API key is configured before making the call
-      if (!process.env.OPENAI_API_KEY) {
-        logger.error("OpenAI chat error: OPENAI_API_KEY is not set in environment");
+      const apiKey = process.env.AI_PROVIDER === "openai" ? process.env.OPENAI_API_KEY : process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        const provider = process.env.AI_PROVIDER || "gemini";
+        logger.error(`AI chat error: ${provider === "gemini" ? "GEMINI_API_KEY" : "OPENAI_API_KEY"} is not set`);
         return {
-          reply: "AI service is not configured. Please ask the admin to set the OPENAI_API_KEY environment variable.",
+          reply: provider === "gemini"
+            ? "AI service not configured. Set GEMINI_API_KEY (free from https://aistudio.google.com/app/apikey)"
+            : "AI service not configured. Set OPENAI_API_KEY in environment.",
           tokensUsed: 0,
         };
       }

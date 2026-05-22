@@ -11,27 +11,32 @@ const router = Router();
 
 // ─── Health Check (no auth required) ────────────────────────
 router.get("/health", async (_req: Request, res: Response) => {
+  const provider = env.AI_PROVIDER || "gemini";
+  const apiKey = provider === "gemini" ? env.GEMINI_API_KEY : env.OPENAI_API_KEY;
+
   const status: Record<string, any> = {
-    keyConfigured: !!env.OPENAI_API_KEY,
-    keyPrefix: env.OPENAI_API_KEY ? env.OPENAI_API_KEY.slice(0, 8) + "..." : "NOT SET",
+    provider,
+    keyConfigured: !!apiKey,
+    keyPrefix: apiKey ? apiKey.slice(0, 8) + "..." : "NOT SET",
     model: OPENAI_MODEL,
-    openaiReachable: false,
+    reachable: false,
     error: null,
   };
 
-  if (!env.OPENAI_API_KEY) {
-    status.error = "OPENAI_API_KEY is not set in environment variables";
+  if (!apiKey) {
+    status.error = provider === "gemini"
+      ? "GEMINI_API_KEY is not set. Get free key at https://aistudio.google.com/app/apikey"
+      : "OPENAI_API_KEY is not set";
     return res.status(503).json({ success: false, ...status });
   }
 
   try {
-    // Quick test: list models (lightweight call)
     const response = await openai.chat.completions.create({
       model: OPENAI_MODEL,
       messages: [{ role: "user", content: "Say OK" }],
       max_tokens: 5,
     });
-    status.openaiReachable = true;
+    status.reachable = true;
     status.testResponse = response.choices[0]?.message?.content;
     status.tokensUsed = response.usage?.total_tokens;
     return res.status(200).json({ success: true, ...status });

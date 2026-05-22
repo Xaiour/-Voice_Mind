@@ -101,6 +101,45 @@
   }
 }
 
+/* Periodic breathe/pulse animation for glass cards */
+@layer utilities {
+  .glass-breathe {
+    animation: glass-breathe 6s ease-in-out infinite;
+  }
+
+  .glass-breathe-delay-1 {
+    animation: glass-breathe 6s ease-in-out infinite 1.5s;
+  }
+
+  .glass-breathe-delay-2 {
+    animation: glass-breathe 6s ease-in-out infinite 3s;
+  }
+
+  .glass-breathe-delay-3 {
+    animation: glass-breathe 6s ease-in-out infinite 4.5s;
+  }
+}
+
+@keyframes glass-breathe {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  }
+  50% {
+    transform: scale(1.008);
+    box-shadow: 0 12px 40px 0 rgba(0, 240, 255, 0.06);
+  }
+}
+
+/* Interactive cursor glow on glass cards */
+.glass-card {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  transform: translateY(-2px) scale(1.005);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

@@ -13,6 +13,7 @@ import {
 
 // Lazy-load orb only when dashboard has data (keeps empty state fast)
 const EmotionalOrb = dynamic(() => import("@/components/three-d/EmotionalOrb"), { ssr: false });
+const CursorTrail = dynamic(() => import("@/components/three-d/CursorTrail"), { ssr: false });
 
 type EmotionType = "calm" | "energetic" | "anxious" | "joyful";
 
@@ -30,6 +31,7 @@ function EmptyDashboard() {
   return (
     <div className="relative min-h-screen text-slate-100 font-sans select-none overflow-x-hidden" style={{ backgroundColor: "#050510" }}>
       <ParticleBackground />
+      <CursorTrail />
 
       <header className="w-full px-6 py-4 relative z-10">
         <nav className="max-w-7xl mx-auto flex items-center justify-between px-6 py-3 rounded-full glass-panel">
@@ -169,6 +171,7 @@ export default function DashboardPage() {
   return (
     <div className="relative min-h-screen text-slate-100 font-sans select-none overflow-x-hidden" style={{ backgroundColor: "#050510" }}>
       <ParticleBackground />
+      <CursorTrail />
 
       {/* Header */}
       <header className="w-full px-6 py-4 relative z-10">
@@ -211,7 +214,7 @@ export default function DashboardPage() {
         {/* ROW 1: Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {/* Wellness Score */}
-          <div className="glass-card rounded-2xl p-5 flex flex-col items-center justify-center gap-2">
+          <div className="glass-card glass-breathe rounded-2xl p-5 flex flex-col items-center justify-center gap-2">
             <div className="w-20 h-20 relative">
               <ResponsiveContainer width="100%" height="100%">
                 <RadialBarChart cx="50%" cy="50%" innerRadius="70%" outerRadius="100%" data={wellnessRadial} startAngle={90} endAngle={-270}>
@@ -226,7 +229,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Stress */}
-          <div className="glass-card rounded-2xl p-5 flex flex-col justify-between gap-2">
+          <div className="glass-card glass-breathe-delay-1 rounded-2xl p-5 flex flex-col justify-between gap-2">
             <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Stress</span>
             <span className="text-3xl font-extrabold text-slate-100">{stats.stressLevel}<span className="text-sm text-slate-500">%</span></span>
             <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
@@ -236,14 +239,14 @@ export default function DashboardPage() {
           </div>
 
           {/* Sessions */}
-          <div className="glass-card rounded-2xl p-5 flex flex-col justify-between gap-2">
+          <div className="glass-card glass-breathe-delay-2 rounded-2xl p-5 flex flex-col justify-between gap-2">
             <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Sessions</span>
             <span className="text-3xl font-extrabold text-slate-100">{stats.totalSessions}</span>
             <span className="text-[9px] text-slate-500">Total recordings</span>
           </div>
 
           {/* Energy */}
-          <div className="glass-card rounded-2xl p-5 flex flex-col justify-between gap-2">
+          <div className="glass-card glass-breathe-delay-3 rounded-2xl p-5 flex flex-col justify-between gap-2">
             <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Energy</span>
             <span className="text-3xl font-extrabold text-slate-100">{stats.energyLevel}<span className="text-sm text-slate-500">%</span></span>
             <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">

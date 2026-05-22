@@ -1,56 +1,108 @@
-# Dependencies
+# ═══════════════════════════════════════════════════════════════
+# VoiceMind .gitignore
+# ═══════════════════════════════════════════════════════════════
+
+# ─── Dependencies ─────────────────────────────────────────────
 node_modules/
 .pnp
 .pnp.js
+.yarn/
 
-# Build outputs
+# ─── Build Outputs ────────────────────────────────────────────
 dist/
 .next/
 out/
 build/
 *.tsbuildinfo
+next-env.d.ts
 
-# Environment
+# ─── Environment Variables (NEVER commit these!) ──────────────
 .env
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
 .env.*.local
 
-# IDE
+# ─── IDE / Editor ─────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
 *.swo
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
 
-# OS
+# ─── OS Generated Files ──────────────────────────────────────
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# Turbo
+# ─── Turborepo ────────────────────────────────────────────────
 .turbo/
 
-# Uploads
+# ─── File Uploads (user audio recordings) ────────────────────
 uploads/
 !uploads/.gitkeep
 
-# Python
+# ─── Python (Voice Analysis Service) ─────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
 *.egg-info/
+*.egg
 .venv/
 venv/
+env/
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+*.so
+.mypy_cache/
+.pytest_cache/
 
-# Docker
+# ─── ML Models (too large for git) ───────────────────────────
+*.h5
+*.pkl
+*.joblib
+*.pt
+*.pth
+*.onnx
+models/
+!models/.gitkeep
+
+# ─── Docker ───────────────────────────────────────────────────
 docker-compose.override.yml
+.docker/
 
-# Testing
+# ─── Testing & Coverage ──────────────────────────────────────
 coverage/
 .nyc_output/
+*.lcov
+.coverage
+htmlcov/
 
-# Logs
+# ─── Logs ─────────────────────────────────────────────────────
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Misc
+# ─── Misc ─────────────────────────────────────────────────────
 *.tgz
 .cache/
+.parcel-cache/
+.temp/
+tmp/
+
+# ─── Sentry ──────────────────────────────────────────────────
+.sentryclirc

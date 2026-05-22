@@ -281,8 +281,9 @@ export function VoiceCheckIn() {
       setPhase("analyzing");
 
       // 2. Poll for analysis results (Python service processes async)
+      // Increased: 60 attempts × 2s = 120 seconds max wait
       let attempts = 0;
-      const maxAttempts = 15;
+      const maxAttempts = 60;
 
       while (attempts < maxAttempts) {
         await new Promise((r) => setTimeout(r, 2000));
@@ -295,10 +296,16 @@ export function VoiceCheckIn() {
           const resultData = await resultRes.json();
           const analysis = resultData.data;
 
-          if (analysis.status === "completed" || analysis.status === "failed") {
-            // Store result in localStorage for dashboard to pick up
+          if (analysis.status === "completed") {
+            // Store REAL result in localStorage for dashboard to pick up
             localStorage.setItem("voicemind-latest-analysis", JSON.stringify(analysis));
-            // Redirect to dashboard
+            window.location.href = "/dashboard";
+            return;
+          }
+
+          if (analysis.status === "failed") {
+            // Analysis failed — store the error info
+            localStorage.setItem("voicemind-latest-analysis", JSON.stringify(analysis));
             window.location.href = "/dashboard";
             return;
           }
@@ -307,20 +314,19 @@ export function VoiceCheckIn() {
         attempts++;
       }
 
-      // Timeout — still redirect with whatever we have
+      // Timeout — store a "still processing" status so dashboard knows it's not fake
       localStorage.setItem("voicemind-latest-analysis", JSON.stringify({
-        status: "completed",
-        emotions: { primary: "calm", confidence: 0.85 },
-        aiInsights: { sentimentScore: 7 },
+        status: "timeout",
+        analysisId,
+        message: "Analysis is still processing. Check history later.",
       }));
       window.location.href = "/dashboard";
     } catch (error: any) {
       console.error("Voice analysis error:", error.message);
-      // Store fallback and redirect
+      // Store error info — NOT mock data
       localStorage.setItem("voicemind-latest-analysis", JSON.stringify({
-        status: "completed",
-        emotions: { primary: MOCK_RESULT.emotion, confidence: MOCK_RESULT.confidence },
-        voiceFeatures: { pitch: { mean: MOCK_RESULT.metrics.pitch } },
+        status: "error",
+        message: error.message || "Upload failed. Please try again.",
       }));
       window.location.href = "/dashboard";
     }

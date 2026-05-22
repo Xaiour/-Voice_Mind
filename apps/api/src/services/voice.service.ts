@@ -140,7 +140,7 @@ export class VoiceService {
         formData,
         {
           headers: formData.getHeaders(),
-          timeout: 30000, // 30s timeout
+          timeout: 120000, // 120s timeout — librosa can be slow on first load
           maxContentLength: 50 * 1024 * 1024,
         }
       );

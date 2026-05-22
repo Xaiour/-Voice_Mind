@@ -105,13 +105,14 @@ export function VoiceCheckIn() {
   const animateWaveform = useCallback(() => {
     if (!analyserRef.current) return;
     const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-    analyserRef.current.getByteTimeDomainData(dataArray);
+    analyserRef.current.getByteFrequencyData(dataArray);
 
-    // Sample 40 points from the waveform
-    const step = Math.floor(dataArray.length / 40);
+    // Sample 40 points from frequency data (0-255 range)
+    const step = Math.floor(dataArray.length / 40) || 1;
     const bars = Array.from({ length: 40 }, (_, i) => {
-      const value = dataArray[i * step] || 128;
-      return Math.max(4, Math.abs(value - 128) / 2);
+      const value = dataArray[i * step] || 0;
+      // Scale to a visible range: min 4, max 64
+      return Math.max(4, (value / 255) * 64);
     });
     setWaveformData(bars);
     animFrameRef.current = requestAnimationFrame(animateWaveform);

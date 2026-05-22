@@ -182,6 +182,13 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-4">
             <Link
+              href="/chat"
+              className="flex items-center gap-2 px-4 py-2 rounded-full border border-cyan-500/30 bg-cyan-950/20 text-xs font-semibold text-cyan-300 hover:border-cyan-500/50 transition-colors"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+              AI Chat
+            </Link>
+            <Link
               href="/voice"
               className="flex items-center gap-2 px-4 py-2 rounded-full border border-purple-500/30 bg-purple-950/20 text-xs font-semibold text-purple-300 hover:border-purple-500/50 transition-colors"
             >

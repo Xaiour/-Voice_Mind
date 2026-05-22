@@ -43,6 +43,7 @@ services:
       - REDIS_URL=redis://redis:6379
       - VOICE_SERVICE_URL=http://voice:8001
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o}
       - UPLOAD_DIR=/app/uploads
     depends_on:
       mongo:

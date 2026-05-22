@@ -41,3 +41,28 @@ export const env = {
   // Session
   SESSION_TTL: parseInt(process.env.SESSION_TTL || "86400"), // 24 hours
 };
+
+// ─── Startup Validation ─────────────────────────────────────
+const warnings: string[] = [];
+
+if (!env.OPENAI_API_KEY) {
+  warnings.push(
+    "OPENAI_API_KEY is not set! AI Chat and voice analysis insights will NOT work.\n" +
+    "  → Set it in your .env file at the project root, then run: docker compose up -d --build"
+  );
+} else if (!env.OPENAI_API_KEY.startsWith("sk-")) {
+  warnings.push(
+    `OPENAI_API_KEY looks invalid (doesn't start with "sk-"). Current value starts with: "${env.OPENAI_API_KEY.slice(0, 8)}..."\n` +
+    "  → Make sure you copied the full key from https://platform.openai.com/api-keys"
+  );
+} else {
+  console.log(`✓ OpenAI configured — model: ${env.OPENAI_MODEL}, key: ${env.OPENAI_API_KEY.slice(0, 8)}...${env.OPENAI_API_KEY.slice(-4)}`);
+}
+
+if (warnings.length > 0) {
+  console.warn("\n╔══════════════════════════════════════════════════════════╗");
+  console.warn("║  ⚠️  VoiceMind Environment Warnings                      ║");
+  console.warn("╚══════════════════════════════════════════════════════════╝");
+  warnings.forEach((w) => console.warn(`\n⚠️  ${w}`));
+  console.warn("");
+}

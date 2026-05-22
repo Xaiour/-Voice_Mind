@@ -341,7 +341,7 @@ export default function DashboardPage() {
                   />
                   <Tooltip
                     contentStyle={{ backgroundColor: "#0a0a1a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "11px" }}
-                    formatter={(value: number) => [`${value}%`, "Intensity"]}
+                    formatter={(value) => [`${value}%`, "Intensity"]}
                   />
                 </RadarChart>
               </ResponsiveContainer>
@@ -385,7 +385,7 @@ export default function DashboardPage() {
           <div className="h-[180px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
-                data={analyses.slice(0, 14).reverse().map((a, i) => ({
+                data={analyses.slice(0, 14).reverse().map((a) => ({
                   day: new Date(a.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
                   anxiety: Math.round((a.emotions?.distribution?.fearful || 0) * 100 + (100 - (a.aiInsights?.sentimentScore || 5) * 10) * 0.3),
                 }))}
@@ -403,7 +403,7 @@ export default function DashboardPage() {
                 <Tooltip
                   contentStyle={{ backgroundColor: "#0a0a1a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "11px" }}
                   labelStyle={{ color: "#94a3b8" }}
-                  formatter={(value: number) => [`${value}%`, "Anxiety"]}
+                  formatter={(value) => [`${value}%`, "Anxiety"]}
                 />
                 <Area type="monotone" dataKey="anxiety" stroke="#f59e0b" fill="url(#anxietyGrad)" strokeWidth={2} dot={{ r: 3, fill: "#f59e0b" }} />
               </AreaChart>

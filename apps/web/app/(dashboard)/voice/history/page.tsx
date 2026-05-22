@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { ParticleBackground } from "@/components/three-d";
 
-const ParticleBackgroundLazy = dynamic(
+const ParticleBackground = dynamic(
   () => import("@/components/three-d/ParticleBackground"),
   { ssr: false }
 );

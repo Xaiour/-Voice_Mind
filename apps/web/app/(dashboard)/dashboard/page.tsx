@@ -7,6 +7,7 @@ import { useDashboardData } from "@/hooks/useDashboardData";
 import { ParticleBackground } from "@/components/three-d";
 import {
   AreaChart, Area, BarChart, Bar, RadialBarChart, RadialBar,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
 
@@ -145,6 +146,25 @@ export default function DashboardPage() {
   const wellnessRadial = [
     { name: "score", value: stats.moodScore, fill: "#00f0ff" },
   ];
+
+  // Emotion hexagon radar data (6 factors)
+  const emotionRadarData = latest?.emotions?.distribution
+    ? [
+        { emotion: "Happy", value: Math.round((latest.emotions.distribution.happy || 0) * 100) },
+        { emotion: "Sad", value: Math.round((latest.emotions.distribution.sad || 0) * 100) },
+        { emotion: "Fear", value: Math.round((latest.emotions.distribution.fearful || 0) * 100) },
+        { emotion: "Disgust", value: Math.round((latest.emotions.distribution.disgust || 0) * 100) },
+        { emotion: "Anger", value: Math.round((latest.emotions.distribution.angry || 0) * 100) },
+        { emotion: "Surprise", value: Math.round((latest.emotions.distribution.surprise || 0) * 100) },
+      ]
+    : [
+        { emotion: "Happy", value: 65 },
+        { emotion: "Sad", value: 15 },
+        { emotion: "Fear", value: 20 },
+        { emotion: "Disgust", value: 8 },
+        { emotion: "Anger", value: 12 },
+        { emotion: "Surprise", value: 35 },
+      ];
 
   return (
     <div className="relative min-h-screen text-slate-100 font-sans select-none overflow-x-hidden" style={{ backgroundColor: "#050510" }}>
@@ -291,13 +311,48 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ROW 3: Voice Metrics + Recent Sessions */}
+        {/* ROW 3: Emotion Radar + Voice Metrics */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Emotion Hexagon Radar */}
+          <div className="glass-card rounded-2xl p-6">
+            <h3 className="text-sm font-bold text-slate-200 mb-1">Emotion Spectrum</h3>
+            <p className="text-[10px] text-slate-500 mb-4">6-factor emotional distribution from voice analysis</p>
+            <div className="h-[240px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart cx="50%" cy="50%" outerRadius="75%" data={emotionRadarData}>
+                  <PolarGrid stroke="rgba(255,255,255,0.08)" />
+                  <PolarAngleAxis
+                    dataKey="emotion"
+                    tick={{ fontSize: 10, fill: "#94a3b8" }}
+                  />
+                  <PolarRadiusAxis
+                    angle={90}
+                    domain={[0, 100]}
+                    tick={{ fontSize: 8, fill: "#475569" }}
+                    axisLine={false}
+                  />
+                  <Radar
+                    name="Emotion"
+                    dataKey="value"
+                    stroke="#00f0ff"
+                    fill="#00f0ff"
+                    fillOpacity={0.2}
+                    strokeWidth={2}
+                  />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: "#0a0a1a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "11px" }}
+                    formatter={(value: number) => [`${value}%`, "Intensity"]}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
           {/* Voice Metrics */}
           <div className="glass-card rounded-2xl p-6">
             <h3 className="text-sm font-bold text-slate-200 mb-1">Voice Biomarkers</h3>
             <p className="text-[10px] text-slate-500 mb-4">Acoustic features from latest analysis</p>
-            <div className="h-[180px]">
+            <div className="h-[240px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={voiceMetrics} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
@@ -317,44 +372,44 @@ export default function DashboardPage() {
               </ResponsiveContainer>
             </div>
           </div>
+        </div>
 
-          {/* Recent Sessions */}
-          <div className="glass-card rounded-2xl p-6 flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-slate-200">Recent Sessions</h3>
-              <Link href="/voice/history" className="text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors">
-                View all &rarr;
-              </Link>
-            </div>
+        {/* ROW 4: Recent Sessions */}
+        <div className="glass-card rounded-2xl p-6 flex flex-col">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-slate-200">Recent Sessions</h3>
+            <Link href="/voice/history" className="text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors">
+              View all &rarr;
+            </Link>
+          </div>
 
-            <div className="flex-1 flex flex-col gap-3 overflow-y-auto">
-              {analyses.slice(0, 5).map((a) => {
-                const emotion = mapEmotionToType(a.emotions?.primary);
-                const score = Math.round((a.aiInsights?.sentimentScore || 5) * 10);
-                const colors: Record<EmotionType, string> = {
-                  calm: "text-cyan-400",
-                  energetic: "text-pink-400",
-                  anxious: "text-purple-400",
-                  joyful: "text-yellow-400",
-                };
-                return (
-                  <div key={a._id} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/30 border border-slate-900 hover:border-slate-800 transition-colors">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-xs font-semibold text-slate-200 truncate max-w-[180px]">
-                        {a.audioFileName || "Voice Recording"}
-                      </span>
-                      <span className="text-[10px] text-slate-500">
-                        {new Date(a.createdAt).toLocaleDateString()} &middot; {a.emotions?.primary || "analyzing"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`text-xs font-bold ${colors[emotion]}`}>{score}/100</span>
-                      <span className={`w-2 h-2 rounded-full ${score > 60 ? "bg-emerald-400" : score > 40 ? "bg-amber-400" : "bg-rose-400"}`} />
-                    </div>
+          <div className="flex flex-col gap-3 overflow-y-auto max-h-[250px]">
+            {analyses.slice(0, 5).map((a) => {
+              const emotion = mapEmotionToType(a.emotions?.primary);
+              const score = Math.round((a.aiInsights?.sentimentScore || 5) * 10);
+              const colors: Record<EmotionType, string> = {
+                calm: "text-cyan-400",
+                energetic: "text-pink-400",
+                anxious: "text-purple-400",
+                joyful: "text-yellow-400",
+              };
+              return (
+                <div key={a._id} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/30 border border-slate-900 hover:border-slate-800 transition-colors">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-semibold text-slate-200 truncate max-w-[180px]">
+                      {a.audioFileName || "Voice Recording"}
+                    </span>
+                    <span className="text-[10px] text-slate-500">
+                      {new Date(a.createdAt).toLocaleDateString()} &middot; {a.emotions?.primary || "analyzing"}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-xs font-bold ${colors[emotion]}`}>{score}/100</span>
+                    <span className={`w-2 h-2 rounded-full ${score > 60 ? "bg-emerald-400" : score > 40 ? "bg-amber-400" : "bg-rose-400"}`} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 

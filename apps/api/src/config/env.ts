@@ -28,7 +28,7 @@ export const env = {
   OPENAI_MODEL: process.env.OPENAI_MODEL || "gpt-4o",
 
   // Google Gemini (free alternative - no card needed)
-  AI_PROVIDER: process.env.AI_PROVIDER || "gemini",
+  AI_PROVIDER: process.env.AI_PROVIDER || "openai",
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
   GEMINI_MODEL: process.env.GEMINI_MODEL || "gemini-2.0-flash",
 
@@ -49,23 +49,14 @@ export const env = {
 
 // ─── Startup Validation ─────────────────────────────────────
 const warnings: string[] = [];
-const provider = env.AI_PROVIDER || "gemini";
+const provider = env.AI_PROVIDER || "openai";
 
-if (provider === "gemini") {
-  if (!env.GEMINI_API_KEY) {
-    warnings.push(
-      "GEMINI_API_KEY is not set! AI Chat will NOT work.\n" +
-      "  → Get a FREE key from: https://aistudio.google.com/app/apikey\n" +
-      "  → Set GEMINI_API_KEY=AIzaSy... in your .env file"
-    );
-  } else {
-    console.log(`✓ AI configured — provider: Gemini, model: ${env.GEMINI_MODEL}, key: ${env.GEMINI_API_KEY.slice(0, 8)}...`);
-  }
-} else {
+if (provider === "openai") {
   if (!env.OPENAI_API_KEY) {
     warnings.push(
-      "OPENAI_API_KEY is not set! AI Chat will NOT work.\n" +
-      "  → Set it in your .env file, then rebuild"
+      "OPENAI_API_KEY is not set! AI Chat and voice analysis insights will NOT work.\n" +
+      "  → Get your key from: https://platform.openai.com/api-keys\n" +
+      "  → Set OPENAI_API_KEY=sk-... in your .env file"
     );
   } else if (!env.OPENAI_API_KEY.startsWith("sk-")) {
     warnings.push(
@@ -74,6 +65,16 @@ if (provider === "gemini") {
     );
   } else {
     console.log(`✓ AI configured — provider: OpenAI, model: ${env.OPENAI_MODEL}, key: ${env.OPENAI_API_KEY.slice(0, 8)}...${env.OPENAI_API_KEY.slice(-4)}`);
+  }
+} else {
+  if (!env.GEMINI_API_KEY) {
+    warnings.push(
+      "GEMINI_API_KEY is not set! AI Chat will NOT work.\n" +
+      "  → Get a FREE key from: https://aistudio.google.com/app/apikey\n" +
+      "  → Set GEMINI_API_KEY=AIzaSy... in your .env file"
+    );
+  } else {
+    console.log(`✓ AI configured — provider: Gemini, model: ${env.GEMINI_MODEL}, key: ${env.GEMINI_API_KEY.slice(0, 8)}...`);
   }
 }
 

@@ -2,11 +2,11 @@ import OpenAI from "openai";
 import { env } from "./env";
 
 // ─── AI Provider Configuration ──────────────────────────────
-// Supports both OpenAI and Google Gemini (free, no card needed)
-// Set AI_PROVIDER=gemini in .env to use Gemini (default for free deployment)
-// Set AI_PROVIDER=openai to use OpenAI (requires billing)
+// Supports both OpenAI (default) and Google Gemini (free fallback)
+// Set AI_PROVIDER=openai in .env to use OpenAI (default)
+// Set AI_PROVIDER=gemini to use Gemini (free, no card needed)
 
-const provider = env.AI_PROVIDER || "gemini";
+const provider = env.AI_PROVIDER || "openai";
 
 const config =
   provider === "gemini"

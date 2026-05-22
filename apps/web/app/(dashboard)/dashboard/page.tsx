@@ -374,7 +374,44 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ROW 4: Recent Sessions */}
+        {/* ROW 4: Daily Anxiety Trend */}
+        <div className="glass-card rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-bold text-slate-200">Daily Anxiety Level</h3>
+              <p className="text-[10px] text-slate-500">Day-to-day anxiety tracked from voice patterns</p>
+            </div>
+          </div>
+          <div className="h-[180px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={analyses.slice(0, 14).reverse().map((a, i) => ({
+                  day: new Date(a.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+                  anxiety: Math.round((a.emotions?.distribution?.fearful || 0) * 100 + (100 - (a.aiInsights?.sentimentScore || 5) * 10) * 0.3),
+                }))}
+                margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="anxietyGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                <XAxis dataKey="day" tick={{ fontSize: 9, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 9, fill: "#64748b" }} axisLine={false} tickLine={false} domain={[0, 100]} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#0a0a1a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "11px" }}
+                  labelStyle={{ color: "#94a3b8" }}
+                  formatter={(value: number) => [`${value}%`, "Anxiety"]}
+                />
+                <Area type="monotone" dataKey="anxiety" stroke="#f59e0b" fill="url(#anxietyGrad)" strokeWidth={2} dot={{ r: 3, fill: "#f59e0b" }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* ROW 5: Recent Sessions */}
         <div className="glass-card rounded-2xl p-6 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-bold text-slate-200">Recent Sessions</h3>
@@ -413,7 +450,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ROW 4: Quick Action */}
+        {/* ROW 6: Quick Action */}
         <div className="glass-card rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
             <h3 className="text-sm font-bold text-slate-200">Ready for your next check-in?</h3>

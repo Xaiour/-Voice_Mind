@@ -62,6 +62,30 @@ const MOCK_RESULT: AnalysisResult = {
 
 const MAX_DURATION = 30; // seconds
 
+// ─── Question Pool (constant, randomized per session) ────────
+const QUESTION_POOL = [
+  "How did you sleep last night?",
+  "What's the first thing you thought about today?",
+  "Describe your energy level right now.",
+  "What's something that made you smile recently?",
+  "How does your body feel at this moment?",
+  "What are you most looking forward to today?",
+  "Is there anything weighing on your mind?",
+  "How would you describe your mood in one word?",
+  "What's one thing you're grateful for right now?",
+  "Have you taken a break today? How did it feel?",
+  "What sounds do you hear around you?",
+  "If your emotions had a color, what would it be?",
+  "What's one kind thing you did for yourself today?",
+  "How connected do you feel to others right now?",
+  "What would make the rest of your day better?",
+  "Describe a moment today that felt peaceful.",
+  "What's your breathing like right now — fast or slow?",
+  "Is there something you've been avoiding thinking about?",
+  "How do you feel about the week ahead?",
+  "What's one small win you had recently?",
+];
+
 // ─── Component ──────────────────────────────────────────────
 export function VoiceCheckIn() {
   const [phase, setPhase] = useState<RecordingPhase>("idle");
@@ -72,6 +96,8 @@ export function VoiceCheckIn() {
   const [waveformData, setWaveformData] = useState<number[]>(Array(40).fill(4));
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [currentQuestion, setCurrentQuestion] = useState("");
+  const questionIndexRef = useRef(0);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -100,6 +126,24 @@ export function VoiceCheckIn() {
       stopRecording();
     }
   }, [duration, phase]);
+
+  // ─── Question Prompt Rotation ───────────────────────────
+  useEffect(() => {
+    if (phase !== "recording") return;
+
+    // Shuffle and pick first question on start
+    const shuffled = [...QUESTION_POOL].sort(() => Math.random() - 0.5);
+    questionIndexRef.current = 0;
+    setCurrentQuestion(shuffled[0]);
+
+    // Rotate question every 8 seconds
+    const interval = setInterval(() => {
+      questionIndexRef.current = (questionIndexRef.current + 1) % shuffled.length;
+      setCurrentQuestion(shuffled[questionIndexRef.current]);
+    }, 8000);
+
+    return () => clearInterval(interval);
+  }, [phase]);
 
   // ─── Waveform Animation ─────────────────────────────────
   const animateWaveform = useCallback(() => {
@@ -472,6 +516,19 @@ export function VoiceCheckIn() {
                     />
                   ))}
                 </div>
+
+                {/* Question Prompt */}
+                <motion.div
+                  key={currentQuestion}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -5 }}
+                  transition={{ duration: 0.4 }}
+                  className="text-center px-4 py-3 rounded-xl border border-purple-500/15 bg-purple-500/[0.03]"
+                >
+                  <p className="text-[10px] text-purple-300/50 uppercase tracking-wider mb-1">Try answering</p>
+                  <p className="text-sm text-white/70 font-medium leading-relaxed">{currentQuestion}</p>
+                </motion.div>
 
                 {/* Progress Bar */}
                 <div className="h-1 rounded-full bg-white/5 overflow-hidden">

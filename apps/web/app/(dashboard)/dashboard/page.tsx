@@ -273,13 +273,13 @@ export default function DashboardPage() {
           <div className="glass-card rounded-2xl p-5 flex flex-col items-center justify-between overflow-hidden">
             <div className="text-center">
               <h3 className="text-sm font-bold text-slate-200">Emotional State</h3>
-              <p className="text-[10px] text-slate-500 mt-1">
-                {latest?.emotions?.primary || "Analyzing..."}
+              <p className="text-[10px] text-slate-500 mt-1 capitalize">
+                {latest?.emotions?.primary || latest?.aiInsights?.emotionalState || (stats.totalSessions > 0 ? "Calm" : "Analyzing...")}
               </p>
             </div>
             <div className="w-full h-[160px] relative flex-shrink-0">
               <EmotionalOrb
-                emotion={mapEmotionToType(latest?.emotions?.primary)}
+                emotion={mapEmotionToType(latest?.emotions?.primary || latest?.aiInsights?.emotionalState)}
                 interactive={false}
               />
             </div>

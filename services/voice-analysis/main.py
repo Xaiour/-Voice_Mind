@@ -38,7 +38,7 @@ def analyze_audio():
     """
     Main analysis endpoint.
     Accepts: multipart/form-data with 'audio' file field.
-    Returns: JSON with voice metrics, emotion scores, and indicators.
+    Returns: JSON matching the Express API's expected VoiceFeatures interface.
     """
     # Validate file exists
     if "audio" not in request.files:
@@ -65,7 +65,46 @@ def analyze_audio():
         # Stage 2: Analyze emotions from features
         analysis = analyze_emotions(features)
 
-        return jsonify(analysis), 200
+        # Stage 3: Format response to match Express API's VoiceFeatures interface
+        # The Express API expects this exact shape:
+        response = {
+            "pitch": {
+                "mean": features["pitch_mean"],
+                "min": features["pitch_min"],
+                "max": features["pitch_max"],
+                "std": features["pitch_std"],
+            },
+            "energy": {
+                "mean": features["energy_mean"],
+                "max": features["energy_max"],
+            },
+            "speakingRate": features["speech_rate"],
+            "pauseFrequency": features["pause_ratio"],
+            "voiceQuality": round(1.0 - features["jitter"], 4),  # Invert jitter: lower jitter = higher quality
+            "mfccFeatures": features["mfccs"],
+            "transcript": "",  # No transcription in current pipeline
+            "emotions": {
+                "primary": analysis["emotion"],
+                "confidence": analysis["confidence"],
+                "distribution": {
+                    "happy": _score_to_dist(analysis, "happy"),
+                    "sad": _score_to_dist(analysis, "sad"),
+                    "angry": _score_to_dist(analysis, "angry"),
+                    "fearful": _score_to_dist(analysis, "fearful"),
+                    "disgust": _score_to_dist(analysis, "disgust"),
+                    "surprise": _score_to_dist(analysis, "surprise"),
+                    "neutral": _score_to_dist(analysis, "neutral"),
+                },
+            },
+            # Extra fields for direct use
+            "stress_score": analysis["stress_score"],
+            "anxiety_score": analysis["anxiety_score"],
+            "depression_score": analysis["depression_score"],
+            "duration": analysis["duration"],
+            "indicators": analysis["indicators"],
+        }
+
+        return jsonify(response), 200
 
     except Exception as e:
         return jsonify({"error": f"Analysis failed: {str(e)}"}), 500
@@ -74,6 +113,33 @@ def analyze_audio():
         # Cleanup temp file
         if temp_path and os.path.exists(temp_path):
             os.unlink(temp_path)
+
+
+def _score_to_dist(analysis: dict, emotion_name: str) -> float:
+    """
+    Convert stress/anxiety/depression scores into an emotion distribution.
+    Maps clinical scores to discrete emotion probabilities (0.0-1.0).
+    """
+    stress = analysis["stress_score"] / 100.0
+    anxiety = analysis["anxiety_score"] / 100.0
+    depression = analysis["depression_score"] / 100.0
+    calm = 1.0 - max(stress, anxiety, depression)
+
+    if emotion_name == "happy":
+        return round(max(0, calm * 0.7 - depression * 0.3), 3)
+    elif emotion_name == "sad":
+        return round(min(1.0, depression * 0.8), 3)
+    elif emotion_name == "angry":
+        return round(min(1.0, stress * 0.5), 3)
+    elif emotion_name == "fearful":
+        return round(min(1.0, anxiety * 0.7), 3)
+    elif emotion_name == "disgust":
+        return round(min(1.0, stress * 0.2 + depression * 0.1), 3)
+    elif emotion_name == "surprise":
+        return round(min(1.0, anxiety * 0.3), 3)
+    elif emotion_name == "neutral":
+        return round(max(0, calm * 0.8), 3)
+    return 0.0
 
 
 if __name__ == "__main__":

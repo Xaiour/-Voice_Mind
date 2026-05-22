@@ -2,12 +2,16 @@
 
 import React from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { ParticleBackground } from "@/components/three-d";
 import {
   AreaChart, Area, BarChart, Bar, RadialBarChart, RadialBar,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
+
+// Lazy-load orb only when dashboard has data (keeps empty state fast)
+const EmotionalOrb = dynamic(() => import("@/components/three-d/EmotionalOrb"), { ssr: false });
 
 type EmotionType = "calm" | "energetic" | "anxious" | "joyful";
 
@@ -222,44 +226,68 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ROW 2: Mood Trend Chart (full width) */}
-        <div className="glass-card rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-bold text-slate-200">Mood & Stress Trend</h3>
-              <p className="text-[10px] text-slate-500">Last {moodTrendData.length} sessions</p>
+        {/* ROW 2: Mood Trend Chart + Orb */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Mood Trend - Takes 2 cols */}
+          <div className="lg:col-span-2 glass-card rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-sm font-bold text-slate-200">Mood & Stress Trend</h3>
+                <p className="text-[10px] text-slate-500">Last {moodTrendData.length} sessions</p>
+              </div>
+              <div className="flex items-center gap-4 text-[10px]">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-cyan-400" />Mood</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400" />Stress</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-400" />Energy</span>
+              </div>
             </div>
-            <div className="flex items-center gap-4 text-[10px]">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-cyan-400" />Mood</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400" />Stress</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-400" />Energy</span>
+            <div className="h-[220px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={moodTrendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="moodGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#00f0ff" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#00f0ff" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="stressGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                  <XAxis dataKey="session" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} domain={[0, 100]} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: "#0a0a1a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "11px" }}
+                    labelStyle={{ color: "#94a3b8" }}
+                  />
+                  <Area type="monotone" dataKey="mood" stroke="#00f0ff" fill="url(#moodGrad)" strokeWidth={2} dot={{ r: 3, fill: "#00f0ff" }} />
+                  <Area type="monotone" dataKey="stress" stroke="#f43f5e" fill="url(#stressGrad)" strokeWidth={2} dot={{ r: 3, fill: "#f43f5e" }} />
+                  <Area type="monotone" dataKey="energy" stroke="#a855f7" fill="none" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </div>
-          <div className="h-[220px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={moodTrendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="moodGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00f0ff" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#00f0ff" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="stressGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-                <XAxis dataKey="session" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} domain={[0, 100]} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: "#0a0a1a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "11px" }}
-                  labelStyle={{ color: "#94a3b8" }}
-                />
-                <Area type="monotone" dataKey="mood" stroke="#00f0ff" fill="url(#moodGrad)" strokeWidth={2} dot={{ r: 3, fill: "#00f0ff" }} />
-                <Area type="monotone" dataKey="stress" stroke="#f43f5e" fill="url(#stressGrad)" strokeWidth={2} dot={{ r: 3, fill: "#f43f5e" }} />
-                <Area type="monotone" dataKey="energy" stroke="#a855f7" fill="none" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
+
+          {/* Emotional Orb - Contained in fixed-size card */}
+          <div className="glass-card rounded-2xl p-5 flex flex-col items-center justify-between overflow-hidden">
+            <div className="text-center">
+              <h3 className="text-sm font-bold text-slate-200">Emotional State</h3>
+              <p className="text-[10px] text-slate-500 mt-1">
+                {latest?.emotions?.primary || "Analyzing..."}
+              </p>
+            </div>
+            <div className="w-full h-[160px] relative flex-shrink-0">
+              <EmotionalOrb
+                emotion={mapEmotionToType(latest?.emotions?.primary)}
+                interactive={false}
+              />
+            </div>
+            <div className="text-center">
+              <span className="text-lg font-extrabold text-cyan-400">{stats.moodScore}</span>
+              <span className="text-xs text-slate-500">/100</span>
+              <p className="text-[9px] text-slate-500 mt-1">Wellness Score</p>
+            </div>
           </div>
         </div>
 
